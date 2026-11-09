@@ -1,0 +1,43 @@
+# Node dependencies
+**/node_modules/
+
+# Frontend and backend build output
+**/dist/
+**/dist-ssr/
+**/build/
+**/coverage/
+
+# Local environment files (keep example templates)
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.template
+
+# Private credentials and certificates
+**/serviceAccountKey.json
+**/*service-account*.json
+**/*serviceAccount*.json
+*.pem
+*.key
+*.p12
+*.pfx
+.firebase/
+
+# Locally uploaded resumes
+backend/services/resume/uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local editor and operating-system files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.local
