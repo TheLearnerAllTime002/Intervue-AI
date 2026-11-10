@@ -66,7 +66,7 @@
     "frontend": {
       "root": "frontend",
       "framework": "vite",
-      "installCommand": "npm ci",
+      "installCommand": "npm install --ignore-scripts",
       "buildCommand": "npm run build",
       "outputDirectory": "dist"
     }
