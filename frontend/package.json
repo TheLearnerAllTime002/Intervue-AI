@@ -9,6 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=7.0.0"
+  },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@reduxjs/toolkit": "^2.12.0",
