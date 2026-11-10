@@ -14,8 +14,10 @@ import { proxyWithHeaders } from "./utils/proxyWithHeaders.js"
 import { sendContactMessage } from "./controllers/contact.controller.js"
 const app = express()
 
+const frontendOrigin = process.env.FRONTEND_URL?.replace(/\/+$/, "")
+
 app.use(cors({
-    origin:process.env.FRONTEND_URL,
+    origin: frontendOrigin,
     credentials:true
 }))
 
