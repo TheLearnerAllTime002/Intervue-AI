@@ -1,88 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "gateway": {
-      "root": "backend/gateway",
-      "framework": "express",
-      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts",
-      "bindings": [
-        {
-          "type": "service",
-          "service": "auth",
-          "format": "url",
-          "env": "AUTH_SERVICE_URL"
-        },
-        {
-          "type": "service",
-          "service": "resume",
-          "format": "url",
-          "env": "RESUME_SERVICE_URL"
-        },
-        {
-          "type": "service",
-          "service": "interview",
-          "format": "url",
-          "env": "INTERVIEW_SERVICE_URL"
-        },
-        {
-          "type": "service",
-          "service": "roadmap",
-          "format": "url",
-          "env": "ROADMAP_SERVICE_URL"
-        },
-        {
-          "type": "service",
-          "service": "billing",
-          "format": "url",
-          "env": "BILLING_SERVICE_URL"
-        }
-      ]
-    },
-    "auth": {
-      "root": "backend/services/auth",
-      "framework": "express",
-      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
-    },
-    "billing": {
-      "root": "backend/services/billing",
-      "framework": "express",
-      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
-    },
-    "interview": {
-      "root": "backend/services/interview",
-      "framework": "express",
-      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
-    },
-    "resume": {
-      "root": "backend/services/resume",
-      "framework": "express",
-      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
-    },
-    "roadmap": {
-      "root": "backend/services/roadmap",
-      "framework": "express",
-      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
-    },
-    "frontend": {
-      "root": "frontend",
-      "framework": "vite",
-      "installCommand": "npm install --ignore-scripts",
-      "buildCommand": "npm run build",
-      "outputDirectory": "dist"
-    }
-  },
+  "installCommand": "npm install --prefix frontend --ignore-scripts",
+  "buildCommand": "npm run build --prefix frontend",
+  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": {
-        "service": "gateway"
-      }
-    },
-    {
       "source": "/(.*)",
-      "destination": {
-        "service": "frontend"
-      }
+      "destination": "/index.html"
     }
   ]
 }
