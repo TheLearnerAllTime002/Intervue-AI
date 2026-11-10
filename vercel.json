@@ -1,11 +1,82 @@
 {
-  "installCommand": "npm ci --prefix frontend",
-  "buildCommand": "npm run build --prefix frontend",
-  "outputDirectory": "frontend/dist",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "gateway": {
+      "root": "backend/gateway",
+      "framework": "express",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "auth",
+          "format": "url",
+          "env": "AUTH_SERVICE_URL"
+        },
+        {
+          "type": "service",
+          "service": "resume",
+          "format": "url",
+          "env": "RESUME_SERVICE_URL"
+        },
+        {
+          "type": "service",
+          "service": "interview",
+          "format": "url",
+          "env": "INTERVIEW_SERVICE_URL"
+        },
+        {
+          "type": "service",
+          "service": "roadmap",
+          "format": "url",
+          "env": "ROADMAP_SERVICE_URL"
+        },
+        {
+          "type": "service",
+          "service": "billing",
+          "format": "url",
+          "env": "BILLING_SERVICE_URL"
+        }
+      ]
+    },
+    "auth": {
+      "root": "backend/services/auth",
+      "framework": "express"
+    },
+    "billing": {
+      "root": "backend/services/billing",
+      "framework": "express"
+    },
+    "interview": {
+      "root": "backend/services/interview",
+      "framework": "express"
+    },
+    "resume": {
+      "root": "backend/services/resume",
+      "framework": "express"
+    },
+    "roadmap": {
+      "root": "backend/services/roadmap",
+      "framework": "express"
+    },
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite",
+      "installCommand": "npm ci",
+      "buildCommand": "npm run build",
+      "outputDirectory": "dist"
+    }
+  },
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "gateway"
+      }
+    },
+    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": {
+        "service": "frontend"
+      }
     }
   ]
 }
