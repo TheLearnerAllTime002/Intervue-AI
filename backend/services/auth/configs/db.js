@@ -5,6 +5,9 @@ export const connectDb= async()=>{
     throw new Error("MONGODB_URL is missing from the auth service environment");
   }
 
-  await mongoose.connect(mongoUrl);
+  await mongoose.connect(mongoUrl, {
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 5000,
+  });
   console.log("Auth database connected");
 }

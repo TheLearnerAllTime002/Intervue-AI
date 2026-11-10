@@ -6,6 +6,7 @@ import LoginModel from '../components/LoginModel';
 import { useState } from 'react';
 import dashboard from "../assets/image.png"
 import { FiMic, FiFileText, FiBarChart2, FiMap } from "react-icons/fi";
+import { Link } from 'react-router-dom'
 function Home({ setUser }) {
     const [showLogin, setShowLogin] = useState(false)
     return (
@@ -22,7 +23,7 @@ function Home({ setUser }) {
                 <div className='flex items-center gap-2'>
 
                     <div className='w-7 h-7 rounded-lg bg-[#0A0A0A] flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.18)]'>
-                        <GiArtificialHive size={15} color='white' /></div>
+                        <GiArtificialHive size={15} color='#171717' /></div>
 
                     <span className='font-extrabold text-base tracking-tight text-[#0A0A0A]'>Intervue AI</span>
                 </div>
@@ -47,7 +48,7 @@ function Home({ setUser }) {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.05 }}
-                        className='inline-flex items-center px-3 py-1.5 rounded-full border border-black/15 bg-black/5 text-black/70 text-xs font-medium mb-4'>
+                        className='inline-flex items-center border-2 border-black bg-sky-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-950 shadow-[3px_3px_0_#171717] mb-5'>
                         Multi-Agent Interview Platform
 
                     </motion.div>
@@ -56,20 +57,20 @@ function Home({ setUser }) {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.55, delay: 0.12 }}
-                        className='text-3xl md:text-5xl font-extrabold leading-[1.1] tracking-tight mb-4 text-[#0A0A0A] [text-shadow:0_4px_24px_rgba(0,0,0,0.12)]'>
+                        className='font-serif text-4xl md:text-6xl font-black leading-[1.02] tracking-[-0.04em] mb-5 text-black'>
                         Job Interviews<br />
-                        <span className="text-black/30">
+                        <span className="text-sky-950">
                             Don't Have to Suck
                         </span><br />
-                        Anymore!
+                        <span className='inline-block mt-2 border-2 border-black bg-yellow-300 px-3 py-1 text-black shadow-[4px_4px_0_#171717]'>Anymore!</span>
                     </motion.h1>
 
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.55, delay: 0.2 }}
-                        className='text-black/45 text-sm leading-relaxed max-w-md mx-auto mb-6 [text-shadow:0_2px_10px_rgba(0,0,0,0.06)]'>
-                        Fresher.AI is an innovative AI-powered interview preparation platform
+                        className='mx-auto mb-7 max-w-lg font-sans text-sm sm:text-base font-medium leading-7 text-sky-950'>
+                        Intervue AI is an AI-powered interview preparation platform
                         designed to help job seekers excel in their interviews.
                     </motion.p>
 
@@ -106,19 +107,19 @@ function Home({ setUser }) {
             <section className='py-16 bg-[#F8F9FA]'>
                 <div className='max-w-5xl mx-auto px-6'>
                     <div className='text-center mb-10'>
-                        <div className='inline-flex items-center px-3 py-1.5 rounded-full border border-black/15 bg-black/5 text-black/70 text-xs font-medium mb-4'>
+                        <div className='inline-flex items-center border-2 border-black bg-sky-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-950 shadow-[3px_3px_0_#171717] mb-5'>
                             AI Powered Agents
                         </div>
 
-                        <h2 className='text-2xl md:text-4xl font-extrabold tracking-tight text-[#0A0A0A] [text-shadow:0_4px_20px_rgba(0,0,0,0.1)]'>
-                            Specialized Agents For
-                            <span className="block text-black/30">
-                                Every Interview Stage
+                        <h2 className='font-serif text-3xl md:text-5xl font-black leading-tight tracking-[-0.035em] text-black'>
+                            <span className='block'>Specialized Agents</span>
+                            <span className="mt-1 block text-sky-950">
+                                For Every Interview Stage
                             </span>
                         </h2>
 
-                        <p className='text-black/40 text-sm max-w-2xl mx-auto mt-4 leading-relaxed'>
-                            Fresher.AI combines multiple AI agents that work together
+                        <p className='mx-auto mt-5 max-w-2xl text-sm sm:text-base font-medium leading-7 text-sky-950'>
+                            Intervue AI combines multiple AI agents that work together
                             to help you build your resume, practice interviews,
                             receive detailed feedback, and follow a personalized roadmap
                             to land your dream job.
@@ -155,7 +156,7 @@ function Home({ setUser }) {
                                     viewport={{ once: true }}
                                     transition={{ duration: 0.45, delay: i * 0.08 }}
                                     whileHover={{ y: -10, scale: 1.02 }}
-                                    className='group relative overflow-hidden bg-[#0A0A0A]/80 backdrop-blur-2xl border border-white/10 rounded-2xl p-5 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.4)] hover:border-white/20 transition-all'>
+                                    className={`group relative overflow-hidden bg-[#0A0A0A]/80 backdrop-blur-2xl border border-white/10 rounded-2xl p-5 shadow-[0_8px_32px_rgba(0,0,0,0.25)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.4)] hover:border-white/20 transition-all ${i % 2 ? "neo-blue-surface" : "neo-yellow-surface"}`}>
                                         <div className='absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-transparent pointer-events-none'/>
 
                                         <div className='absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500'/>
@@ -180,15 +181,16 @@ function Home({ setUser }) {
                 <footer className='border-t border-black/7 py-6 text-center bg-white'>
                 <div className='flex items-center justify-center gap-2 mb-1.5'>
                     <div className='w-5 h-5 rounded-md bg-[#0A0A0A] flex items-center justify-center'>
-                        <GiArtificialHive size={11} color='white'/>
+                        <GiArtificialHive size={11} color='#171717'/>
 
                     </div>
                     <span className='font-bold text-xs text-[#0A0A0A]/70'>Intervue AI</span>
                 </div>
                 <div className='text-black/50 text-xs'>
-                © {new Date().getFullYear()} Fresher.AI · All rights reserved
+                © {new Date().getFullYear()} Intervue AI · All rights reserved
                 </div>
 
+                <Link to='/contact' className='mt-3 inline-block text-xs font-extrabold text-sky-900 underline'>Contact Us</Link>
                 </footer>
 
 

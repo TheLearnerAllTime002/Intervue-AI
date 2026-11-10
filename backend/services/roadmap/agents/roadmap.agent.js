@@ -32,7 +32,10 @@ ${JSON.stringify(resume, null, 2)}
 `)
         ]);
 
-        const roadmap = JSON.parse(response.content
+        const raw = Array.isArray(response.content)
+            ? response.content.map((p) => p.text || "").join("")
+            : response.content
+        const roadmap = JSON.parse(raw
             .replace(/```json/g, "")
             .replace(/```/g, "")
             .trim())

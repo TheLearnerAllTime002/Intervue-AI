@@ -1,4 +1,4 @@
-import { json } from "express";
+import mongoose from "mongoose";
 import redis from "../../../shared/redis/redis.js";
 import graph from "../graph/graph.js";
 import Interview from "../models/interview.model.js";
@@ -10,20 +10,34 @@ export const startInterview = async (req, res) => {
         const {
             type,
             role,
+            difficultyMode = "intermediate",
+            companyName = "",
             useResume = false,
             resume = {}, } = req.body;
 
-        if (!type && !role) {
+        const difficultyModes = ["beginner", "intermediate", "advanced", "company-specific"];
+        if (!userId || !["hr", "technical"].includes(type) || typeof role !== "string" || !role.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Interview type and role are required",
             });
+        }
+        if (!difficultyModes.includes(difficultyMode)) {
+            return res.status(400).json({ success: false, message: "Choose a valid interview difficulty." });
+        }
+        if (typeof companyName !== "string" || companyName.length > 120) {
+            return res.status(400).json({ success: false, message: "Company name must be 120 characters or fewer." });
+        }
+        if (difficultyMode === "company-specific" && !companyName.trim()) {
+            return res.status(400).json({ success: false, message: "Enter a company for company-specific practice." });
         }
 
         const result = await graph.invoke({
             action: "start",
             role,
             type,
+            difficultyMode,
+            companyName: companyName.trim(),
             useResume,
             resume
         })
@@ -43,6 +57,10 @@ export const startInterview = async (req, res) => {
             type,
 
             role,
+
+            difficultyMode,
+
+            companyName: companyName.trim(),
 
             useResume,
 
@@ -64,6 +82,10 @@ export const startInterview = async (req, res) => {
 
             totalQuestions: interview.questions.length,
 
+            difficultyMode: interview.difficultyMode,
+
+            companyName: interview.companyName,
+
             question: interview.questions[0],
         })
     } catch (error) {
@@ -82,28 +104,46 @@ export const startInterview = async (req, res) => {
 
 
 export const submitAnswer = async (req, res) => {
+    let claimedInterviewId;
+    let claimedUserId;
     try {
         const userId = req.headers["x-user-id"]
         const { interviewId, answer } = req.body
 
-        if (!interviewId && !answer) {
+        if (
+            !mongoose.isValidObjectId(interviewId) ||
+            typeof answer !== "string" ||
+            !answer.trim()
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Interview Id and Answer are required",
             });
         }
 
-        const interview = await Interview.findOne({
-            _id: interviewId,
-            userId
-        })
+        const interview = await Interview.findOneAndUpdate(
+            {
+                _id: interviewId,
+                userId,
+                status: "in-progress",
+                submissionInProgress: { $ne: true },
+            },
+            { $set: { submissionInProgress: true } },
+            { new: true }
+        )
 
         if (!interview) {
+            const existing = await Interview.findOne({ _id: interviewId, userId }).select("status submissionInProgress");
+            if (existing?.submissionInProgress) {
+                return res.status(409).json({ success: false, message: "An answer is already being processed" });
+            }
             return res.status(404).json({
                 success: false,
                 message: "Interview not found",
             });
         }
+        claimedInterviewId = interviewId;
+        claimedUserId = userId;
 
         if (interview.status === "completed") {
             return res.status(400).json({
@@ -116,6 +156,8 @@ export const submitAnswer = async (req, res) => {
         const currentQuestion = interview.questions[index]
 
         if (!currentQuestion) {
+            interview.submissionInProgress = false;
+            await interview.save();
             return res.status(400).json({
                 success: false,
                 message: "Invalid question index",
@@ -123,6 +165,7 @@ export const submitAnswer = async (req, res) => {
         }
 
         currentQuestion.userAnswer = answer;
+        currentQuestion.answeredAt = new Date();
 
         const completed = interview.currentQuestion + 1 >=
             interview.questions.length;
@@ -143,10 +186,32 @@ export const submitAnswer = async (req, res) => {
             type: interview.type,
 
             questions: interview.questions,
+            askedQuestions: interview.questions
+                .slice(0, index + 1)
+                .map((item) => item.question),
         })
 
 
         currentQuestion.feedback = result.feedback;
+
+        if (
+            !completed &&
+            typeof result.nextQuestion?.question === "string" &&
+            result.nextQuestion.question.trim() &&
+            interview.questions[index + 1]
+        ) {
+            const followUp = result.nextQuestion;
+            const difficulty = ["easy", "medium", "hard"].includes(followUp.difficulty)
+                ? followUp.difficulty
+                : "medium";
+            const timer = Number.isFinite(Number(followUp.timer))
+                ? Math.min(300, Math.max(60, Math.round(Number(followUp.timer))))
+                : 90;
+
+            interview.questions[index + 1].question = followUp.question.trim().slice(0, 1500);
+            interview.questions[index + 1].difficulty = difficulty;
+            interview.questions[index + 1].timer = timer;
+        }
 
         interview.currentQuestion++;
 
@@ -170,6 +235,7 @@ export const submitAnswer = async (req, res) => {
             interview.recommendations =
                 result.report.recommendations;
 
+            interview.submissionInProgress = false;
             await interview.save()
 
             await redis.del(`interviews:${userId}`)
@@ -189,6 +255,7 @@ export const submitAnswer = async (req, res) => {
         }
 
 
+        interview.submissionInProgress = false;
         await interview.save()
 
         await redis.del(`interviews:${userId}`)
@@ -211,6 +278,12 @@ export const submitAnswer = async (req, res) => {
         });
 
     } catch (error) {
+        if (claimedInterviewId && claimedUserId) {
+            await Interview.updateOne(
+                { _id: claimedInterviewId, userId: claimedUserId },
+                { $set: { submissionInProgress: false } }
+            ).catch(() => {});
+        }
 
         console.log(error);
 
@@ -234,7 +307,7 @@ export const getInterview = async (req, res) => {
         const interview = await Interview.findOne({
             _id: id,
             userId
-        })
+        }).lean()
         if (!interview) {
             return res.status(404).json({
                 success: false,
@@ -431,4 +504,82 @@ export const getAllInterviews = async (req, res) => {
     }
 }
 
+export const getPeerBenchmark = async (req, res) => {
+    try {
+        const userId = req.headers["x-user-id"];
+        const ownAttempts = await Interview.find({ userId, status: "completed" })
+            .sort({ createdAt: -1 })
+            .select("role type difficultyMode companyName overallScore")
+            .lean();
+        if (!ownAttempts.length) {
+            return res.json({ success: true, benchmark: { available: false, message: "Complete an interview to compare your progress." } });
+        }
 
+        const latest = ownAttempts[0];
+        const roleKey = latest.role.trim().toLowerCase();
+        const matchingOwnAttempts = ownAttempts.filter((item) =>
+            item.type === latest.type &&
+            item.difficultyMode === latest.difficultyMode &&
+            (item.companyName || "") === (latest.companyName || "") &&
+            item.role.trim().toLowerCase() === roleKey
+        );
+        const ownAverage = matchingOwnAttempts.reduce((sum, item) => sum + (item.overallScore || 0), 0) / matchingOwnAttempts.length;
+
+        const groups = await Interview.aggregate([
+            { $match: { status: "completed", type: latest.type, difficultyMode: latest.difficultyMode, companyName: latest.companyName || "" } },
+            { $addFields: { normalizedRole: { $toLower: { $trim: { input: "$role" } } } } },
+            { $match: { normalizedRole: roleKey } },
+            { $group: { _id: "$userId", score: { $avg: "$overallScore" } } },
+            { $group: {
+                _id: null,
+                participants: { $sum: 1 },
+                averageScore: { $avg: "$score" },
+                scoresBelowMe: { $sum: { $cond: [{ $lt: ["$score", ownAverage] }, 1, 0] } },
+            } },
+        ]);
+        const cohort = groups[0];
+        if (!cohort || cohort.participants < 10) {
+            return res.json({ success: true, benchmark: { available: false, message: "Anonymous comparison appears after at least 10 people complete this interview type for the same role and level." } });
+        }
+        return res.json({
+            success: true,
+            benchmark: {
+                available: true,
+                role: latest.role,
+                type: latest.type,
+                difficultyMode: latest.difficultyMode,
+                personalAverage: Math.round(ownAverage),
+                peerAverage: Math.round(cohort.averageScore),
+                percentile: Math.round((cohort.scoresBelowMe / cohort.participants) * 100),
+                cohortSize: cohort.participants,
+            },
+        });
+    } catch (error) {
+        console.error("Could not calculate peer benchmark:", error.message);
+        return res.status(500).json({ success: false, message: "Could not load the anonymous peer benchmark." });
+    }
+};
+
+export const deleteInterview = async (req, res) => {
+    try {
+        const userId = req.headers["x-user-id"];
+        const { id } = req.params;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Sign in to delete an interview." });
+        }
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ success: false, message: "Invalid interview id." });
+        }
+
+        const deleted = await Interview.findOneAndDelete({ _id: id, userId });
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: "Interview not found." });
+        }
+
+        await redis.del(`interviews:${userId}`);
+        return res.status(200).json({ success: true, message: "Interview deleted." });
+    } catch (error) {
+        console.error("Could not delete interview:", error.message);
+        return res.status(500).json({ success: false, message: "Could not delete this interview." });
+    }
+};

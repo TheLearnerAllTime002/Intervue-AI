@@ -83,6 +83,21 @@ const resumeSchema = new mongoose.Schema({
       type: [String],
       default: [],
     },
+
+    coverLetterHistory: {
+      type: [
+        {
+          coverLetter: { type: String, required: true },
+          subject:     { type: String, default: "" },
+          role:        { type: String, default: "" },
+          company:     { type: String, default: "" },
+          tone:        { type: String, default: "professional" },
+          length:      { type: String, default: "standard" },
+          createdAt:   { type: Date,   default: Date.now },
+        },
+      ],
+      default: [],
+    },
 },{timestamps:true})
 
 

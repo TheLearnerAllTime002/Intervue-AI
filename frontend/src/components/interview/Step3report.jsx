@@ -1,11 +1,34 @@
-import React, { useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { motion } from "motion/react"
 import { FiArrowLeft, FiAward, FiCheck, FiTarget, FiTrendingUp, FiX } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import DownloadBtn from '../resume/DownloadBtn'
+import { addBankQuestion, getQuestionBanks } from '../../apis/interview.api'
 function Step3report({ report, user, setUser }) {
   const navigate = useNavigate()
   const reportRef = useRef(null)
+  const [banks, setBanks] = useState([])
+  const [selectedBankId, setSelectedBankId] = useState("")
+  const [savedQuestions, setSavedQuestions] = useState({})
+  useEffect(() => {
+    getQuestionBanks().then((result) => {
+      const availableBanks = result.banks || []
+      setBanks(availableBanks)
+      if (availableBanks[0]) setSelectedBankId(availableBanks[0]._id)
+    }).catch((error) => console.error("Could not load question banks:", error))
+  }, [])
+
+  const saveQuestion = async (item, index) => {
+    if (!selectedBankId || savedQuestions[index] === "saving") return
+    setSavedQuestions((current) => ({ ...current, [index]: "saving" }))
+    try {
+      const result = await addBankQuestion(selectedBankId, { question: item.question, sourceInterviewId: report._id })
+      setBanks((current) => current.map((bank) => bank._id === selectedBankId ? result.bank : bank))
+      setSavedQuestions((current) => ({ ...current, [index]: "saved" }))
+    } catch (error) {
+      setSavedQuestions((current) => ({ ...current, [index]: error.response?.data?.message || "Could not save question." }))
+    }
+  }
   return (
     <div className='min-h-screen bg-white flex items-center justify-center md:p-5'>
 
@@ -25,7 +48,7 @@ function Step3report({ report, user, setUser }) {
             <h1 className='text-2xl font-bold text-black mt-2'>Interview Report</h1>
 
             <p className='text-xs mb-2 text-zinc-500 mt-1.5'>
-              AI Generated Performance Analysis
+              {report.role} · {report.type?.toUpperCase()} · {report.difficultyMode?.replace("-", " ") || "intermediate"}{report.companyName ? ` · ${report.companyName}` : ""}
             </p>
 
             <DownloadBtn
@@ -195,15 +218,25 @@ function Step3report({ report, user, setUser }) {
              <h3 className="text-xl font-bold text-black mb-5">
                 Question Wise Analysis
               </h3>
+              <p className='mb-4 text-xs text-zinc-600'>Confidence is estimated from answer wording and structure. Filler words are detected from the submitted transcript.</p>
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {banks.length ? <>
+                  <label htmlFor="save-question-bank" className="text-xs font-bold text-black">Save questions to</label>
+                  <select id="save-question-bank" value={selectedBankId} onChange={(event) => { setSelectedBankId(event.target.value); setSavedQuestions({}) }} className="px-2 py-1 text-xs">
+                    {banks.map((bank) => <option key={bank._id} value={bank._id}>{bank.name}</option>)}
+                  </select>
+                </> : <button type="button" onClick={() => navigate("/question-banks")} className="px-3 py-2 text-xs">Create a question bank</button>}
+              </div>
 
               <div className='space-y-5'>
                 {report.questions?.map((item,index)=>(
                   <div key={index} className='rounded-2xl bg-[#17181E] border border-white/10 p-6'>
                     <div>
-                      <span className='text-[11px] uppercase tracking-widest text-zinc-500'>
-                        Question {index+1}
-
-                      </span>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className='text-[11px] uppercase tracking-widest text-zinc-500'>Question {index+1}</span>
+                        {banks.length > 0 && <button type="button" disabled={!selectedBankId || savedQuestions[index] === "saving" || savedQuestions[index] === "saved"} onClick={() => saveQuestion(item, index)} className="px-2 py-1 text-[10px]">{savedQuestions[index] === "saved" ? "Saved" : savedQuestions[index] === "saving" ? "Saving..." : "Save question"}</button>}
+                      </div>
+                      {savedQuestions[index] && savedQuestions[index] !== "saved" && savedQuestions[index] !== "saving" && <p role="alert" className="mt-1 text-[10px] font-bold text-red-800">{savedQuestions[index]}</p>}
                       <h4 className='mt-2.5 text-base font-semibold text-white leading-7'>{item.question}</h4>
                     </div>
 
@@ -214,13 +247,18 @@ function Step3report({ report, user, setUser }) {
                       </p>
                     </div>
 
-                    <div className='grid md:grid-cols-4 gap-3.5 mt-6'>
+                    <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-6'>
                       <div className='rounded-xl bg-black/20 p-3.5'>
                       <p className='text-xs text-zinc-500'>Score</p>
                       <h5 className='mt-2 text-xl font-bold text-white'>
                         {item.feedback?.score ?? 0}
                       </h5>
                       
+                      </div>
+
+                      <div className='rounded-xl bg-black/20 p-3.5'>
+                      <p className='text-xs text-zinc-500'>{report.type === "technical" ? "Technical accuracy" : "Answer accuracy"}</p>
+                      <h5 className='mt-2 text-xl font-bold text-white'>{item.feedback?.correctness ?? 0}</h5>
                       </div>
 
                       <div className='rounded-xl bg-black/20 p-3.5'>
@@ -246,11 +284,22 @@ function Step3report({ report, user, setUser }) {
                       </h5>
                       
                       </div>
+
+                      <div className='rounded-xl bg-black/20 p-3.5'>
+                      <p className='text-xs text-zinc-500'>Confidence estimate</p>
+                      <h5 className='mt-2 text-xl font-bold text-white'>{item.feedback?.confidence ?? 0}</h5>
+                      </div>
+
+                      <div className='rounded-xl bg-black/20 p-3.5'>
+                      <p className='text-xs text-zinc-500'>Filler words detected</p>
+                      <h5 className='mt-2 text-xl font-bold text-white'>{item.feedback?.fillerWordCount ?? 0}</h5>
+                      {item.feedback?.fillerWords?.length > 0 && <p className='mt-1 text-[11px] text-zinc-400'>{item.feedback.fillerWords.join(", ")}</p>}
+                      </div>
                     </div>
 
-                    <div className='mt-6 rounded-xl border border-green-500/20 bg-green-500/5 p-4.5'>
-                    <p className='text-[11px] uppercase tracking-widest text-green-400'>AI Feedback</p>
-                    <p className='mt-2.5 text-sm leading-6 text-zinc-300'>{item.feedback?.feedback ||
+                    <div className='mt-6 rounded-lg border-2 border-black bg-sky-100 p-4'>
+                    <p className='inline-block border-2 border-black bg-white px-2 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-950'>AI Feedback</p>
+                    <p className='mt-2.5 text-sm font-medium leading-6 text-black'>{item.feedback?.feedback ||
                           "No feedback available."}</p>
                     </div>
 

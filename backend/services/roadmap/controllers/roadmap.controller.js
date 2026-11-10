@@ -1,6 +1,7 @@
 import redis from "../../../shared/redis/redis.js";
 import graph from "../graph/roadmap.graph.js";
 import Roadmap from "../models/roadmap.model.js";
+import mongoose from "mongoose";
 
 
 
@@ -39,7 +40,7 @@ export const generateRoadmap =async (req,res)=> {
         ...result.roadmap
       })
 
-      await redis.set(`roadmap:${roadmap._id}`,JSON.stringify(roadmap),"EX", 60*60)
+      await redis.set(`roadmap:${userId}:${roadmap._id}`,JSON.stringify(roadmap),"EX", 60*60)
 
       await redis.del(`userRoadmaps:${userId}`)
 
@@ -96,7 +97,19 @@ export const getRoadmapbyId = async (req,res) => {
         const {id} = req.params;
         const userId = req.headers["x-user-id"];
 
-        const cache = await redis.get(`roadmap:${id}`)
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ success: false, message: "Invalid roadmap id" });
+        }
+
+        const roadmap = await Roadmap.findOne({ _id: id, userId });
+        if (!roadmap) {
+            return res.status(404).json({
+                success: false,
+                message: "Roadmap not found"
+            });
+        }
+
+        const cache = await redis.get(`roadmap:${userId}:${id}`)
         if(cache){
             return res.json({
                 success: true,
@@ -106,19 +119,7 @@ export const getRoadmapbyId = async (req,res) => {
 
         }
 
-        const roadmap = await Roadmap.findOne({
-             _id: id,
-            userId:userId
-        })
-
-        if(!roadmap){
-            return res.status(404).json({
-                success: false,
-                message: "Roadmap not found"
-            });
-        }
-
-        await redis.set(`roadmap:${id}`,JSON.stringify(roadmap),"EX", 60*60)
+        await redis.set(`roadmap:${userId}:${id}`,JSON.stringify(roadmap),"EX", 60*60)
 
         return res.json({
             success: true,

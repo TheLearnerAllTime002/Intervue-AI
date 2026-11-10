@@ -1,7 +1,11 @@
+import interviewModeGuidance from "./interviewModeGuidance.js";
+
 const technicalInterviewPrompt = ({
   role,
   useResume,
   resume,
+  difficultyMode,
+  companyName,
 }) => `
 
 You are a Senior Technical Interviewer.
@@ -13,6 +17,8 @@ Return VALID JSON only.
 Candidate Role:
 
 ${role}
+
+${interviewModeGuidance({ difficultyMode, companyName })}
 
 Resume Available:
 

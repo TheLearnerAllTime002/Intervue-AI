@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useState } from 'react'
 import maleVideo from "../../assets/male-ai.mp4"
 import femaleVideo from "../../assets/female-ai.mp4"
@@ -15,6 +15,7 @@ const navigate = useNavigate()
   const [currentIndex, setCurrentIndex] = useState(interviewData.currentQuestion || 0);
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState(null);
+  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(interviewData.question.timer || 60);
   const [timerActive, setTimerActive] = useState(true); // paused once the answer is submitted
@@ -28,18 +29,20 @@ const navigate = useNavigate()
   const [isAIPlaying, setIsAIPlaying] = useState(false);
   const [subtitle, setSubtitle] = useState("");
   const [selectedVoice, setSelectedVoice] = useState(null);
+  const [availableVoices, setAvailableVoices] = useState([]);
   const [voiceGender, setVoiceGender] = useState("female");
   const [introSpoken, setIntroSpoken] = useState(false);
+  const [speechError, setSpeechError] = useState("");
 
   // Refs
   const aiVideoRef = useRef(null);
   const userVideoRef = useRef(null);
   const recognitionRef = useRef(null);
   const recognitionActiveRef = useRef(false);
-  const recognitionRestartRef = useRef(false);
   const micOnRef = useRef(micOn);
   const aiPlayingRef = useRef(false);
   const streamRef = useRef(null);
+  const submitInFlightRef = useRef(false);
 
 
   const videoSource = voiceGender === "female" ? femaleVideo : maleVideo
@@ -47,62 +50,84 @@ const navigate = useNavigate()
   const showMicon = micOn && !isAIPlaying
 
   // Speech recognition
-
   useEffect(()=>{
-    if(!("webkitSpeechRecognition" in window))return;
-    const rec = new window.webkitSpeechRecognition()
-     rec.lang = "en-US";
-    rec.continuous = true;
-    rec.interimResults = false;
-    rec.onresult = (e)=>{
-      const t = e.results[e.results.length - 1][0].transcript;
-      setAnswer((prev)=>prev + " "+ t)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if(!SpeechRecognition) {
+      window.setTimeout(() => {
+        setSpeechError("Speech-to-text is not supported in this browser. Use Chrome or Edge.")
+      }, 0)
+      return
     }
-    rec.onstart = () => { recognitionActiveRef.current = true }
+    const rec = new SpeechRecognition()
+    rec.lang = "en-US";
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    let finalTranscript = ""
+    rec.onresult = (e)=>{
+      let interim = ""
+      for(let i = e.resultIndex; i < e.results.length; i++){
+        const t = e.results[i][0].transcript
+        if(e.results[i].isFinal){ finalTranscript += " " + t }
+        else { interim = t }
+      }
+      if(finalTranscript.trim()) setAnswer((prev) => (prev + finalTranscript).trimStart())
+      finalTranscript = ""
+      void interim
+    }
+    rec.onstart = () => {
+      recognitionActiveRef.current = true
+      setSpeechError("")
+    }
     rec.onend = () => {
       recognitionActiveRef.current = false
-      if (recognitionRestartRef.current) {
-        recognitionRestartRef.current = false
-        if (micOnRef.current && !aiPlayingRef.current) startMic()
+      if (micOnRef.current && !aiPlayingRef.current) {
+        setTimeout(() => startMic(), 200)
       }
     }
-    rec.onerror = () => {
+    rec.onerror = (e) => {
       recognitionActiveRef.current = false
-      recognitionRestartRef.current = false
+      if (["not-allowed", "service-not-allowed", "audio-capture"].includes(e.error)) {
+        micOnRef.current = false
+        setMicOn(false)
+        setSpeechError(
+          e.error === "audio-capture"
+            ? "No microphone was found. Connect a microphone and try again."
+            : "Microphone access was denied. Allow microphone access and enable the mic again."
+        )
+        return
+      }
+      if (micOnRef.current && !aiPlayingRef.current) {
+        setTimeout(() => startMic(), e.error === "no-speech" ? 200 : 500)
+      }
     }
     recognitionRef.current = rec
 
     return () => {
-      recognitionRestartRef.current = false
       if (recognitionActiveRef.current) rec.abort()
       recognitionActiveRef.current = false
       recognitionRef.current = null
     }
   },[])
 
+  useEffect(() => () => {
+    if (recognitionRef.current && recognitionActiveRef.current) recognitionRef.current.abort()
+    streamRef.current?.getTracks().forEach((track) => track.stop())
+    window.speechSynthesis?.cancel()
+  }, [])
+
 
   const startMic = ()=>{
     const recognition = recognitionRef.current
-    if (!recognition) return
-    if (recognitionActiveRef.current) {
-      recognitionRestartRef.current = true
-      return
-    }
-
-    recognitionActiveRef.current = true
+    if (!recognition || recognitionActiveRef.current) return
     try {
       recognition.start()
     } catch (error) {
-      if (error.name === "InvalidStateError") {
-        recognitionRestartRef.current = true
-      } else {
-        recognitionActiveRef.current = false
-        console.error("Could not start speech recognition:", error)
-      }
+      recognitionActiveRef.current = false
+      if (error.name !== "InvalidStateError") console.error("Could not start speech recognition:", error)
     }
   }
   const stopMic = ()=>{
-    recognitionRestartRef.current = false
     if (!recognitionRef.current || !recognitionActiveRef.current) return
     try {
       recognitionRef.current.stop()
@@ -113,6 +138,12 @@ const navigate = useNavigate()
       }
     }
   }
+
+  useEffect(() => {
+    if (recognitionRef.current && micOn && !isAIPlaying) {
+      startMic()
+    }
+  }, [micOn, isAIPlaying])
 
   const toggleMic = ()=>{
     if(micOn){
@@ -140,7 +171,7 @@ const navigate = useNavigate()
           if(userVideoRef.current) userVideoRef.current.srcObject = stream
 
         },100)
-      } catch (error) {
+      } catch {
         setCameraOn(false)
       }
     }
@@ -167,14 +198,25 @@ const navigate = useNavigate()
     const load = ()=>{
       const voices = window.speechSynthesis.getVoices()
       if(!voices.length)return;
-      const female = voices.find(v => /zira|samantha|female/i.test(v.name));
-      const male   = voices.find(v => /david|mark|male/i.test(v.name));
-      if (female)      { setSelectedVoice(female); setVoiceGender("female"); }
-      else if (male)   { setSelectedVoice(male);   setVoiceGender("male"); }
-      else             { setSelectedVoice(voices[0]); setVoiceGender("female"); }
+      const englishVoices = voices.filter((voice) => /^en([-_]|$)/i.test(voice.lang))
+      const candidates = englishVoices.length ? englishVoices : voices
+      setAvailableVoices(candidates)
+      const naturalVoiceScore = (voice) => {
+        const name = voice.name.toLowerCase()
+        let score = voice.lang.toLowerCase() === "en-us" ? 30 : 0
+        if (/natural|neural|online|premium|enhanced/.test(name)) score += 100
+        if (/google/.test(name)) score += 70
+        if (/aria|jenny|samantha|ava|sonia|joanna|zira|karen|tessa|victoria/.test(name)) score += 25
+        if (/desktop|compact/.test(name)) score -= 10
+        return score
+      }
+      const bestVoice = [...candidates].sort((a, b) => naturalVoiceScore(b) - naturalVoiceScore(a))[0]
+      setSelectedVoice(bestVoice)
+      setVoiceGender(detectGender(bestVoice))
     }
     load()
-    window.speechSynthesis.onvoiceschanged = load
+    window.speechSynthesis.addEventListener("voiceschanged", load)
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", load)
 
   },[])
 
@@ -185,10 +227,10 @@ const navigate = useNavigate()
       window.speechSynthesis.cancel()
 
       setTimeout(()=>{
-        const utter = new SpeechSynthesisUtterance(text.replace(/,/g, ", ... ").replace(/\./g, ". ... "))
+        const utter = new SpeechSynthesisUtterance(text.replace(/\s+/g, " ").trim())
         utter.voice  = selectedVoice;
-        utter.rate   = 0.92;
-        utter.pitch  = 1.05;
+        utter.rate   = 1;
+        utter.pitch  = 1;
         utter.volume = 1;
         utter.onstart=()=>{
           aiPlayingRef.current = true
@@ -200,14 +242,30 @@ const navigate = useNavigate()
           aiPlayingRef.current = false
           aiVideoRef.current?.pause()
           setIsAIPlaying(false)
-          if(micOn) startMic()
-            setTimeout(()=>{ setSubtitle("");resolve() },300)
+          if(micOnRef.current) setTimeout(() => startMic(), 300)
+          setTimeout(()=>{ setSubtitle("");resolve() },300)
         }
         setSubtitle(text)
         window.speechSynthesis.speak(utter)
       },150)
     
     })
+
+  const detectGender = (voice) => {
+    const n = voice.name.toLowerCase()
+    if (/\bmale\b|\bman\b|david|mark|guy|matthew|ryan|daniel|james|thomas|george|arthur|rishi|reed|liam|aaron|eric|brian|christopher|steffan|noel|eddy|carlos|diego|jorge|juan|miguel|paulo|antonio|viktor|ruslan|dmitri|yuri|ali|omar|hassan/.test(n)) return "male"
+    return "female"
+  }
+
+  const changeVoice = (event) => {
+    const voice = availableVoices[Number(event.target.value)]
+    if (!voice) return
+    window.speechSynthesis.cancel()
+    aiPlayingRef.current = false
+    setIsAIPlaying(false)
+    setSelectedVoice(voice)
+    setVoiceGender(detectGender(voice))
+  }
   
 
   useEffect(()=>{
@@ -215,7 +273,7 @@ const navigate = useNavigate()
     const runIntro=async () => {
       setIntroSpoken(true)
       await new Promise((r) => setTimeout(r, 1200));
-      await speakText(`Welcome ${user?.name.split(" ")[0]}! Let's begin your interview.`);
+      await speakText(`Welcome ${user?.name?.split(" ")[0] || "there"}! Let's begin your interview.`);
       await new Promise((r) => setTimeout(r, 900));
       await speakText(interviewData.question.question);
     }
@@ -224,15 +282,6 @@ const navigate = useNavigate()
   },[selectedVoice])
 
 
-
-  useEffect(()=>{
-    setQuestion(interviewData.question);
-    setCurrentIndex(interviewData.currentQuestion);
-    setTimeLeft(interviewData.question.timer || 60);
-
-  },[interviewData])
-
-  
   useEffect(()=>{
     if(!selectedVoice || !introSpoken)return;
     const speakQuestion = async () => {
@@ -244,91 +293,50 @@ const navigate = useNavigate()
   },[question])
 
   useEffect(()=>{
-     setTimeLeft(question.timer || 60);
-    setTimerActive(true);
-
-  },[question])
-
-
-
-  useEffect(()=>{
     if(timeLeft !== 0)return;
-    const autoSubmit = async () => {
-      await speakText("Time is up. Submitting your answer now.");
-      const finalAnswer = answer.trim() || "No answer provided. Time over.";
-
-      setLoading(true)
-
-    const res = await submitAnswer({ interviewId: interviewData.interviewId, answer:finalAnswer})
-
-    if(res.completed){
-       setFeedback(res.feedback);
-        await new Promise((r) => setTimeout(r, 700));
-        await speakText(
-          res.feedback?.feedback ||
-          "Great job! Your interview is complete. Preparing your report now."
-        );
-        setLoading(false);
-        navigate(`/interview/${interviewData.interviewId}/report`);
-        return;
-    }
-
-     setFeedback(res.feedback);
-      await new Promise((r) => setTimeout(r, 700));
-      await speakText(
-        res.feedback?.feedback ||
-        "Noted your answer. Let's move to the next question."
-      );
-      setLoading(false);
-      setQuestion(res.question);
-      setCurrentIndex(res.currentQuestion);
-      setAnswer("");
-      setFeedback(null);
-
-
-    }
-
-
-    autoSubmit()
-   
+    submitAnswerNow(answer.trim() || "No answer provided. Time over.")
 
   },[timeLeft])
 
+  async function submitAnswerNow(finalAnswer) {
+    if (submitInFlightRef.current || !finalAnswer.trim()) return
 
-  const submit =async ()=>{
-
-    if(!answer.trim())return;
-
+    submitInFlightRef.current = true
     setTimerActive(false)
     setLoading(true)
+    setSubmitError("")
 
-    const res = await submitAnswer({ interviewId: interviewData.interviewId, answer})
+    try {
+      const res = await submitAnswer({ interviewId: interviewData.interviewId, answer: finalAnswer })
+      if (!res?.success) {
+        throw new Error(res?.message || "The interview service returned an empty response.")
+      }
 
-    if(res.completed){
-       setFeedback(res.feedback);
-        await new Promise((r) => setTimeout(r, 700));
-        await speakText(
-          res.feedback?.feedback ||
-          "Great job! Your interview is complete. Preparing your report now."
-        );
-        setLoading(false);
-        navigate(`/interview/${interviewData.interviewId}/report`);
-        return;
+      setFeedback(res.feedback)
+
+      if (res.completed) {
+        navigate(`/interview/${interviewData.interviewId}/report`)
+        return
+      }
+
+      if (res.question) {
+        setQuestion(res.question)
+        setCurrentIndex(res.currentQuestion)
+        setAnswer("")
+        setTimeLeft(res.question.timer || 60)
+        setTimerActive(true)
+        submitInFlightRef.current = false
+      }
+    } catch (error) {
+      console.error("Could not submit interview answer:", error)
+      setSubmitError(error.response?.data?.message || error.message || "Could not submit your answer. Please try again.")
+    } finally {
+      setLoading(false)
+      submitInFlightRef.current = false
     }
-
-     setFeedback(res.feedback);
-      await new Promise((r) => setTimeout(r, 700));
-      await speakText(
-        res.feedback?.feedback ||
-        "Noted your answer. Let's move to the next question."
-      );
-      setLoading(false);
-      setQuestion(res.question);
-      setCurrentIndex(res.currentQuestion);
-      setAnswer("");
-      setFeedback(null);
-
   }
+
+  const submit = () => submitAnswerNow(answer.trim())
 
   
 
@@ -337,7 +345,7 @@ const navigate = useNavigate()
     <div className='min-h-screen bg-white flex items-center justify-center p-3 sm:p-5'>
 
 
-      {codeOpen && <CodeEditor onClose={()=>setCodeOpen(false)} onSubmitCode={handleSubmitCode} />}
+      <CodeEditor open={codeOpen} onClose={() => setCodeOpen(false)} onSubmitCode={handleSubmitCode} />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -412,9 +420,9 @@ const navigate = useNavigate()
               :
               <div className='flex flex-col items-center gap-2'>
                 <div className='w-14 h-14 rounded-full bg-white/10 border border-white/15 flex items-center justify-center'>
-                <span className='text-2xl font-bold text-white'>{user?.name.charAt(0).toUpperCase()}</span>
+                <span className='text-2xl font-bold text-white'>{user?.name?.charAt(0)?.toUpperCase() || "?"}</span>
                 </div>
-                <span className='text-xs text-white/35'>{user?.name.split(" ")[0]}</span>
+                <span className='text-xs text-white/35'>{user?.name?.split(" ")[0] || "You"}</span>
                 </div>}     
           </div>
 
@@ -460,11 +468,37 @@ const navigate = useNavigate()
             <div className='min-h-[14px] flex items-center justify-center'>
               {micOn && isAIPlaying && (
                 <span className="text-[10px] text-red-400/80">Mic paused — AI is speaking</span>)}
+              {speechError && !isAIPlaying && (
+                <span role="alert" className="text-center text-[10px] text-red-400/90">{speechError}</span>
+              )}
             </div>
 
             <span className="text-[10px] text-white/35 text-center">
               Coding question? Use <FiCode size={9} className="inline -mt-0.5" /> to write &amp; add code
             </span>
+
+            {availableVoices.length > 0 && (
+              <label className="flex w-full max-w-xs items-center gap-2 text-[10px] font-semibold text-white/50">
+                <span className="shrink-0">AI Voice</span>
+                <select
+                  aria-label="AI voice"
+                  value={Math.max(0, availableVoices.findIndex((v) => v.voiceURI === selectedVoice?.voiceURI))}
+                  onChange={changeVoice}
+                  className="min-w-0 flex-1 rounded-lg bg-white/10 border border-white/10 px-2 py-1 text-[11px] text-white outline-none"
+                >
+                  <optgroup label="Female">
+                    {availableVoices.map((v, i) => detectGender(v) === "female" && (
+                      <option key={`${v.voiceURI}-${i}`} value={i}>{v.name} ({v.lang})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Male">
+                    {availableVoices.map((v, i) => detectGender(v) === "male" && (
+                      <option key={`${v.voiceURI}-${i}`} value={i}>{v.name} ({v.lang})</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </label>
+            )}
 
           </div>
 
@@ -483,6 +517,9 @@ const navigate = useNavigate()
               <div className='flex items-center gap-2 text-zinc-500 text-xs mt-0.5'>
                 <FiClock size={11}/>
                 <span>{question.difficulty}</span>
+                <span>·</span>
+                <span className='capitalize'>{interviewData.difficultyMode?.replace("-", " ") || "intermediate"}</span>
+                {interviewData.companyName && <span>· {interviewData.companyName}</span>}
 
               </div>
             </div>
@@ -522,7 +559,7 @@ const navigate = useNavigate()
           <div className='flex-1 flex flex-col min-h-0'>
             <label className='text-xs font-medium text-zinc-400 mb-1.5'>Your Answer</label>
             <textarea
-            onChange={(e)=>setAnswer(e.target.value)}
+            onChange={(e)=>{ setAnswer(e.target.value); setFeedback(null); setSubmitError("") }}
             value={answer}
             rows={5}
             onKeyDown={(e)=>{if(e.ctrlKey && e.key === "Enter") submit()}}
@@ -537,9 +574,9 @@ const navigate = useNavigate()
                 initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 ,y:6}}
-                className='rounded-xl border border-green-500/20 bg-green-500/5 p-4 max-h-40 overflow-y-auto'>
-                  <p className='text-xs uppercase tracking-widest text-green-400 mb-2'>AI Feedback</p>
-                  <p className='text-sm text-zinc-300 leading-6'>{feedback.feedback}</p>
+                className='rounded-lg border-2 border-black bg-sky-100 p-4 max-h-40 overflow-y-auto'>
+                  <p className='inline-block border-2 border-black bg-white px-2 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-950 mb-2'>AI Feedback</p>
+                  <p className='text-sm font-medium text-black leading-6'>{feedback.feedback}</p>
 
                 </motion.div>)}
             </AnimatePresence>
@@ -553,6 +590,8 @@ const navigate = useNavigate()
              Ctrl+Enter
             </span>to Submit
           </span>
+
+          {submitError && <p role="alert" className="mr-3 text-xs font-bold text-red-700">{submitError}</p>}
 
           <motion.button 
           whileHover={{ scale: 1.02 }}
@@ -569,7 +608,7 @@ const navigate = useNavigate()
                   Submitting…
                 </>
               ) : (
-                <>Submit Answer <FiArrowRight size={15} /></>
+                <>{submitError ? "Retry Answer" : "Submit Answer"} <FiArrowRight size={15} /></>
               )}
 
           </motion.button>

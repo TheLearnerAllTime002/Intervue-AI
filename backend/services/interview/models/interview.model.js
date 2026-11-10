@@ -48,6 +48,21 @@ const feedbackSchema = new mongoose.Schema(
             default: 0,
         },
 
+        confidence: {
+            type: Number,
+            default: 0,
+        },
+
+        fillerWordCount: {
+            type: Number,
+            default: 0,
+        },
+
+        fillerWords: {
+            type: [String],
+            default: [],
+        },
+
         feedback: {
             type: String,
             default: "",
@@ -70,6 +85,10 @@ const questionSchema = new mongoose.Schema(
         userAnswer: {
             type: String,
             default: "",
+        },
+        answeredAt: {
+            type: Date,
+            default: null,
         },
 
         difficulty: {
@@ -108,6 +127,16 @@ const interviewSchema = new mongoose.Schema(
         role: {
             type: String,
             required: true,
+        },
+        difficultyMode: {
+            type: String,
+            enum: ["beginner", "intermediate", "advanced", "company-specific"],
+            default: "intermediate",
+        },
+        companyName: {
+            type: String,
+            default: "",
+            maxlength: 120,
         },
         useResume: {
             type: Boolean,
@@ -153,6 +182,10 @@ const interviewSchema = new mongoose.Schema(
             type: String,
             enum: ["in-progress", "completed"],
             default: "in-progress",
+        },
+        submissionInProgress: {
+            type: Boolean,
+            default: false,
         },
     },
     {

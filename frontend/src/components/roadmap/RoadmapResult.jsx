@@ -13,19 +13,19 @@ function RoadmapResult({roadmap, onClear}) {
         <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-         className='relative overflow-hidden bg-[#000000]/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-5 mb-5 shadow-[0_8px_32px_rgba(0,0,0,0.22)]'>
+         className='neo-blue-surface relative overflow-hidden rounded-lg p-5 mb-6'>
             <div className='absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-transparent pointer-events-none'/>
 
             <div className='relative flex items-start justify-between mb-4'>
 
                 <div>
-                    <p className='text-xs text-white/35 tracking-widest uppercase mb-1'>Your Roadmap</p>
-                    <h2 className='text-xl font-bold text-white'>{roadmap.title}</h2>
-                    <p className='text-sm text-white/45 mt-0.5'>
-                    Target: <span className="text-violet-400 font-medium">{roadmap.targetPackage}</span>
+                    <p className='text-[10px] text-sky-950 font-extrabold tracking-widest uppercase mb-1'>Your roadmap</p>
+                    <h2 className='text-2xl font-black text-black'>{roadmap.title}</h2>
+                    <p className='text-sm font-semibold text-black/70 mt-1'>
+                    Target: <span className="text-sky-950 font-extrabold">{roadmap.targetPackage}</span>
                     </p>
                 </div>
-                <button onClick={onClear} className='text-white/30 hover:text-white/70 transition-colors mt-0.5'>
+                <button onClick={onClear} aria-label='Create a new roadmap' className='neo-yellow-surface mt-0.5 p-2'>
                 <FiX size={16}/></button>
             </div>
 
@@ -35,12 +35,12 @@ function RoadmapResult({roadmap, onClear}) {
             { icon: FiClock,       label: "Duration",   value: roadmap.duration },
             { icon: FiCheckCircle, label: "Modules",    value: `${roadmap.modules.length} topics` },
           ].map(({icon:Icon , label , value})=>(
-            <div key={label} className='rounded-xl p-3 bg-white/5 border border-white/8'>
+            <div key={label} className='rounded-lg p-3 bg-white border-2 border-black'>
                 <div className='flex items-center gap-1.5 mb-1'>
-                    <Icon size={11} className="text-white/30"/>
-                    <span className='text-xs text-white/30'>{label}</span>
+                    <Icon size={12} className="text-sky-900"/>
+                    <span className='text-xs font-bold text-black/65'>{label}</span>
                     </div>
-                    <p className='text-sm font-semibold text-white'>{value}</p>
+                    <p className='text-sm font-extrabold text-black'>{value}</p>
 
             </div>
           ))}
@@ -49,7 +49,7 @@ function RoadmapResult({roadmap, onClear}) {
         </motion.div>
 
         <div className='mb-4'>
-            <p className='text-xs text-black/40 font-semibold uppercase tracking-widest mb-3 flex items-center gap-2'>
+            <p className='inline-flex border-2 border-black bg-sky-200 px-2 py-1 text-xs text-black font-extrabold uppercase tracking-widest mb-4 items-center gap-2'>
             <FiMap size={12}/> Learning Modules </p>
             <div className='flex flex-col gap-2'>
                 {

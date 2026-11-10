@@ -1,5 +1,5 @@
 import express from "express";
-import {addCoins, login, logout, useInterviewCoins } from "../controllers/auth.controller.js";
+import { getCoinHistory, login, logout, useInterviewCoins } from "../controllers/auth.controller.js";
 
 
 
@@ -10,11 +10,10 @@ authRouter.post("/login",login);
 
 authRouter.get("/logout",logout)
 
-authRouter.post("/add-coins",addCoins)
-
 authRouter.post(
   "/use-coins",
   useInterviewCoins
 );
+authRouter.get("/coin-history", getCoinHistory);
 
 export default authRouter;

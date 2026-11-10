@@ -15,6 +15,8 @@ app.use(cookieParser());
 // auth service Dockerfile, which both use port 8001.
 const PORT = process.env.PORT || 8001
 
+// Reload MongoDB and Redis endpoints from this service's local environment on restart.
+
 app.use("/",authRouter);
 
 

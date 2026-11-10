@@ -1,83 +1,113 @@
-import React from 'react'
 import { motion } from "motion/react"
 import { FiArrowLeft, FiArrowRight, FiBriefcase, FiCheck, FiCheckCircle, FiFileText, FiUploadCloud } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useCoins } from '../../apis/user.api'
+import { spendCoins } from '../../apis/user.api'
 import api from '../../utils/axios'
 import { setResume } from '../../redux/resumeSlice'
 import { startInterview } from '../../apis/interview.api'
+import { formatFileSize, validateResumeFile } from '../../utils/validateResumeFile'
 function Step1setup({ user, setUser }) {
     const navigate = useNavigate()
     const dispatch = useDispatch()
     const { resume } = useSelector((state) => state.resume)
     const [role, setRole] = useState("");
     const [type, setType] = useState("technical");
-    const [useResume, setUseResume] = useState(!!resume)
+    const [difficultyMode, setDifficultyMode] = useState("intermediate");
+    const [companyName, setCompanyName] = useState("");
+    const [useResume, setUseResume] = useState(null)
     const [file, setFile] = useState(null)
     const [uploading, setUploading] = useState(false)
+    const [fileError, setFileError] = useState("")
+    const [uploadError, setUploadError] = useState("")
+    const [uploadNotice, setUploadNotice] = useState("")
+    const [uploadProgress, setUploadProgress] = useState(0)
+    const [analysisStarted, setAnalysisStarted] = useState(false)
     const [starting, setStarting] = useState(false)
+    const [startError, setStartError] = useState("")
+
+    const useResumeEnabled = useResume === null ? !!resume : useResume
+
+    const selectResumeFile = async (selectedFile) => {
+        const validationError = await validateResumeFile(selectedFile)
+        setFileError(validationError)
+        setUploadError("")
+        setUploadNotice("")
+        setFile(validationError ? null : selectedFile)
+    }
 
     const uploadResume = async () => {
-        if (!file) {
-            alert("Please select a PDF")
-        }
+        if (!file || uploading) return
+        setUploading(true)
+        setUploadError("")
+        setUploadNotice("")
+        setUploadProgress(0)
+        setAnalysisStarted(false)
         try {
-            setUploading(true)
-            try {
-                
-            const coinResponse = await useCoins({ coins: 10, action: "resume-scorer" })
-
-            setUser((prev) => ({
-                ...prev, interviewCoin: coinResponse?.interviewCoin,
-            }))
-            } catch (error) {
-                setUploading(false)
-                alert("Failed to use coins.")
-                return;
-            }
-
-
             const formData = new FormData()
             formData.append("resume", file)
 
-            const response = await api.post("/api/resume/upload", formData)
+            const response = await api.post("/api/resume/upload", formData, {
+                onUploadProgress: (event) => {
+                    if (!event.total) return
+                    const percent = Math.min(100, Math.round((event.loaded / event.total) * 100))
+                    setUploadProgress(percent)
+                    if (percent >= 100) setAnalysisStarted(true)
+                },
+            })
 
             dispatch(setResume(response?.data?.data))
+            setUploadProgress(100)
             setUploading(false)
             setFile(null)
+            setFileError("")
+            try {
+                const coinResponse = await spendCoins({ coins: 10, action: "resume-scorer" })
+                setUser((prev) => ({ ...prev, interviewCoin: coinResponse?.interviewCoin }))
+            } catch (coinError) {
+                console.error("Resume uploaded but coins could not be deducted:", coinError)
+                setUploadNotice("Resume analyzed successfully, but coin deduction failed. Please contact support.")
+            }
         } catch (error) {
-            console.log(error)
-            alert("Upload failed")
+            console.error("Resume upload failed:", error)
+            setUploadError(error.response?.data?.message || error.message || "Upload failed. Please try again.")
+        } finally {
             setUploading(false)
         }
     }
 
     const start = async () => {
-        setStarting(true)
-        const response = await startInterview({ role, type, useResume, resume })
-
-        if(response){
-            try {
-                
-            const coinResponse = await useCoins({ coins: 50, action: "start-interview" })
-
-            setUser((prev) => ({
-                ...prev, interviewCoin: coinResponse?.interviewCoin,
-            }))
-            } catch (error) {
-                setStarting(false)
-                alert("Failed to use coins.")
-                return;
-            }
-
-
+        if (starting) return
+        if (!role.trim()) {
+            setStartError("Enter a target role before starting the interview.")
+            return
         }
+        if (difficultyMode === "company-specific" && !companyName.trim()) {
+            setStartError("Enter a target company for a company-specific interview.")
+            return
+        }
+        if ((user?.interviewCoin ?? 0) < 50) {
+            setStartError("You need at least 50 coins to start an interview. Purchase more coins from Billing.")
+            return
+        }
+        setStarting(true)
+        setStartError("")
+        try {
+            const coinResponse = await spendCoins({ coins: 50, action: "start-interview" })
+            setUser((prev) => ({ ...prev, interviewCoin: coinResponse?.interviewCoin }))
 
-        setStarting(false)
-        navigate(`/interview/${response.interviewId}`)
-
+            const response = await startInterview({ role, type, difficultyMode, companyName, useResume: useResumeEnabled, resume })
+            if (!response?.success || !response.interviewId) {
+                throw new Error(response?.message || "The interview could not be started. Please try again.")
+            }
+            navigate(`/interview/${response.interviewId}`)
+        } catch (error) {
+            console.error("Could not start interview:", error)
+            setStartError(error.response?.data?.message || error.message || "Could not start the interview. Please try again.")
+        } finally {
+            setStarting(false)
+        }
     }
 
     return (
@@ -160,7 +190,7 @@ function Step1setup({ user, setUser }) {
                             <div className='mt-1.5 flex rounded-xl bg-[#17181E] p-1 border border-white/10'>
                                 {
                                     ["technical", "hr"].map((item) => (
-                                        <button key={item}
+                                        <button type="button" key={item}
                                             onClick={() => setType(item)}
                                             className={`flex-1 h-9 rounded-lg text-xs sm:text-sm font-medium capitalize transition-all ${type === item ? "bg-white text-black" : "text-zinc-400 hover:text-white"
                                                 }`} >
@@ -172,6 +202,44 @@ function Step1setup({ user, setUser }) {
                             </div>
                         </div>
 
+                        <div>
+                            <label className='text-xs font-medium text-zinc-400'>Interview Difficulty</label>
+                            <p className='mt-1 text-[10px] text-zinc-500'>Choose the depth and style of questions.</p>
+                            <div className='mt-2 grid grid-cols-2 gap-2'>
+                                {[
+                                    { value: "beginner", label: "Beginner", description: "Core concepts and guided questions" },
+                                    { value: "intermediate", label: "Intermediate", description: "Typical role-level interview" },
+                                    { value: "advanced", label: "Advanced", description: "Deeper trade-offs and scenarios" },
+                                    { value: "company-specific", label: "Company-specific", description: "Adapted to a target employer" },
+                                ].map((mode) => (
+                                    <button
+                                        key={mode.value}
+                                        type='button'
+                                        aria-pressed={difficultyMode === mode.value}
+                                        onClick={() => setDifficultyMode(mode.value)}
+                                        className='interview-difficulty-option min-h-[62px] p-2 text-left'
+                                    >
+                                        <span className='block text-xs font-black'>{mode.label}</span>
+                                        <span className='mt-1 block text-[9px] font-medium leading-4'>{mode.description}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {difficultyMode === "company-specific" && (
+                            <div>
+                                <label htmlFor='interview-company' className='text-xs font-medium text-zinc-400'>Target Company</label>
+                                <input
+                                    id='interview-company'
+                                    value={companyName}
+                                    onChange={(event) => setCompanyName(event.target.value)}
+                                    maxLength={120}
+                                    placeholder='Enter a company name'
+                                    className='mt-1.5 h-11 w-full rounded-xl bg-[#17181E] px-4 text-sm text-white'
+                                />
+                            </div>
+                        )}
+
                         {/* resume toggle */}
 
                         <div className='rounded-xl border border-white/10 bg-[#17181E] p-4'>
@@ -182,8 +250,8 @@ function Step1setup({ user, setUser }) {
                                         AI will personalize questions using your resume.
                                     </p>
                                 </div>
-                                <button onClick={() => setUseResume(!useResume)} className={`relative shrink-0 w-12 h-7 rounded-full transition ${useResume ? "bg-white" : "bg-zinc-700"}`}>
-                                    <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-black transition-all ${useResume ? "left-5.5" : "left-0.5"}`} />
+                                <button type="button" aria-pressed={useResumeEnabled} onClick={() => setUseResume(!useResumeEnabled)} className={`relative shrink-0 w-12 h-7 rounded-full transition ${useResumeEnabled ? "bg-white" : "bg-zinc-700"}`}>
+                                    <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-black transition-all ${useResumeEnabled ? "left-5.5" : "left-0.5"}`} />
                                 </button>
 
 
@@ -192,24 +260,24 @@ function Step1setup({ user, setUser }) {
                         </div>
 
 
-                        {resume && useResume && (
+                        {resume && useResumeEnabled && (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
 
-                                className='rounded-xl border border-green-500/20 bg-green-500/5 p-4'>
+                                className='rounded-lg border-2 border-black bg-sky-100 p-4'>
                                 <div className='flex items-center gap-3'>
 
-                                    <div className='w-9 h-9 shrink-0 rounded-lg bg-green-500 flex items-center justify-center'>
-                                        <FiFileText size={15} className='text-white' />
+                                    <div className='w-9 h-9 shrink-0 rounded-lg border-2 border-black bg-white flex items-center justify-center'>
+                                        <FiFileText size={15} className='text-sky-950' />
                                     </div>
                                     <div className='flex-1 min-w-0'>
-                                        <h4 className='text-sm font-semibold text-white'>Resume Ready <span className='text-gray-400'>({resume?.suggestedRole})</span></h4>
-                                        <p className='text-xs text-zinc-400'>
+                                        <h4 className='text-sm font-extrabold text-black'>Resume Ready <span className='text-sky-950'>({resume?.suggestedRole})</span></h4>
+                                        <p className='text-xs font-medium text-black/75'>
                                             Resume detected successfully.
                                         </p>
                                     </div>
-                                    <FiCheckCircle size={18} className='text-green-400 shrink-0' />
+                                    <FiCheckCircle size={20} className='text-emerald-950 shrink-0' />
 
                                 </div>
 
@@ -217,7 +285,7 @@ function Step1setup({ user, setUser }) {
                         )}
 
                         {
-                            useResume && (
+                            useResumeEnabled && (
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
@@ -232,8 +300,8 @@ function Step1setup({ user, setUser }) {
                                                 : "Upload your resume to generate personalized interview questions."
                                             }
                                         </p>
-                                        <input type="file" className='hidden' accept='.pdf'
-                                            onChange={(e) => { if (e.target.files[0]) setFile(e.target.files[0]) }} />
+                                        <input type="file" className='hidden' accept='.pdf,application/pdf' disabled={uploading}
+                                            onChange={(e) => { selectResumeFile(e.target.files?.[0]); e.target.value = "" }} />
 
                                     </label>
 
@@ -241,6 +309,7 @@ function Step1setup({ user, setUser }) {
                                         <div className='mt-4'>
                                             <div className='rounded-lg bg-black/20 border border-white/10 p-2.5'>
                                                 <p className='text-xs text-zinc-300 truncate'>{file.name}</p>
+                                                <p className='mt-1 text-[10px] text-zinc-400'>{formatFileSize(file.size)} · PDF</p>
                                             </div>
 
                                             <button
@@ -255,6 +324,17 @@ function Step1setup({ user, setUser }) {
                                         </div>
                                     )}
 
+                                    {fileError && <p role="alert" className="mt-2 border-2 border-red-900 bg-red-100 p-2 text-xs font-bold text-red-950">{fileError}</p>}
+                                    {uploading && (
+                                        <div className="mt-3 rounded-lg border-2 border-black bg-white p-3" aria-live="polite">
+                                            <div className="flex justify-between text-xs font-bold"><span>{analysisStarted ? "Analyzing resume..." : "Uploading PDF..."}</span><span>{uploadProgress}%</span></div>
+                                            <div role="progressbar" aria-label="Resume upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadProgress} className="mt-2 h-3 border-2 border-black bg-white"><div className="h-full bg-sky-400 transition-[width]" style={{ width: `${uploadProgress}%` }} /></div>
+                                            {analysisStarted && <p className="mt-2 animate-pulse text-[10px] font-semibold text-sky-950">Upload complete. Extracting and analyzing resume content.</p>}
+                                        </div>
+                                    )}
+                                    {uploadError && <p role="alert" className="mt-2 border-2 border-red-900 bg-red-100 p-2 text-xs font-bold text-red-950">{uploadError}</p>}
+                                    {uploadNotice && <p role="status" className="mt-2 border-2 border-black bg-yellow-100 p-2 text-xs font-bold">{uploadNotice}</p>}
+
                                 </motion.div>
                             )
                         }
@@ -264,13 +344,14 @@ function Step1setup({ user, setUser }) {
                     onClick={start}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
-                        disabled={!role || starting || (useResume && !resume)}
+                        disabled={!role.trim() || (difficultyMode === "company-specific" && !companyName.trim()) || starting || (useResumeEnabled && !resume)}
                         className='mt-5 h-12 rounded-xl bg-white text-black text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition'>
                         {starting ? "Starting Interview..." : (
                             <>Start Interview <FiArrowRight size={15} /></>
                         )}
 
                     </motion.button>
+                    {startError && <p role="alert" className='mt-3 text-xs font-bold text-red-800'>{startError}</p>}
 
                 </div>
 

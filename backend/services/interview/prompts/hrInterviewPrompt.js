@@ -1,7 +1,11 @@
+import interviewModeGuidance from "./interviewModeGuidance.js";
+
 const hrInterviewPrompt = ({
   role,
   useResume,
   resume,
+  difficultyMode,
+  companyName,
 }) => `
 
 You are a Senior HR Interviewer with 15+ years of experience.
@@ -12,6 +16,8 @@ Return VALID JSON only.
 
 Candidate Role:
 ${role}
+
+${interviewModeGuidance({ difficultyMode, companyName })}
 
 Resume Available:
 ${useResume ? "YES" : "NO"}

@@ -1,11 +1,14 @@
 import mongoose from "mongoose";
 
 export const connectDB=async () => {
-    try {
-        await mongoose.connect(process.env.MONGODB_URL)
-        console.log("Connected DB")
-    } catch (error) {
-        console.log("MongoDb error",error)
+    const mongoUrl = process.env.MONGODB_URL
+    if (!mongoUrl) {
+        throw new Error("MONGODB_URL is missing from the interview service environment")
     }
-    
+
+    await mongoose.connect(mongoUrl, {
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
+    })
+    console.log("Interview database connected")
 }

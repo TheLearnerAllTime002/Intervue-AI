@@ -1,202 +1,208 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from "motion/react"
-import { useState } from 'react'
-import { FiMenu, FiX } from 'react-icons/fi'
+import { FiArrowDownLeft, FiArrowLeft, FiArrowUpRight, FiCheckCircle, FiClock, FiLock } from 'react-icons/fi'
 import { GiTwoCoins } from 'react-icons/gi'
 import PricingCard from '../components/PricingCard'
 import api from '../utils/axios'
 import { useNavigate } from 'react-router-dom'
+import { getCoinHistory } from '../apis/user.api'
 
-const plan = [
+const plans = [
     {
         title: "Free",
         price: "Free",
         coins: 150,
-        button: "Claimed Coins",
+        button: "Included",
         popular: false,
         disabled: true,
-        features: [
-            "150 Interview Coins",
-            "Resume Builder",
-            "Resume Scorer",
-            "Roadmap Generator",
-        ],
+        features: ["150 Interview Coins", "Resume Builder", "Resume Scorer", "Roadmap Generator"],
     },
     {
         title: "Starter",
         price: "199",
         coins: 300,
-        button: "Buy Now",
+        button: "Buy 300 coins",
         popular: true,
         disabled: false,
-        features: [
-            "300 Interview Coins",
-            "Unlimited Resume Score",
-            "Unlimited Roadmaps",
-            "Priority AI Response",
-        ],
+        features: ["300 Interview Coins", "Unlimited Resume Score", "Unlimited Roadmaps", "Priority AI Response"],
     },
-];
-function Billing({ user, setUser }) {
-    const [showMenu, setShowMenu] = useState(false)
+]
 
+const COIN_ACTION_LABELS = {
+    "resume-scorer": "Resume Scorer",
+    "start-interview": "AI Interview",
+    "roadmap-builder": "Roadmap Generator",
+    "download-pdf": "Resume Builder PDF",
+    "coin-purchase": "Coin package purchase",
+}
+
+function Billing({ user, setUser }) {
+    const [checkoutPlan, setCheckoutPlan] = useState("")
+    const [checkoutError, setCheckoutError] = useState("")
+    const [coinHistory, setCoinHistory] = useState([])
+    const [historyLoading, setHistoryLoading] = useState(true)
+    const [historyError, setHistoryError] = useState("")
     const navigate = useNavigate()
-    const handlePayment = async (plan) => {
-        if (plan.disabled) return;
+
+    useEffect(() => {
+        let active = true
+        getCoinHistory()
+            .then((result) => {
+                if (!active) return
+                setCoinHistory(result.transactions || [])
+                if (Number.isFinite(Number(result.interviewCoin))) {
+                    setUser((current) => ({ ...current, interviewCoin: Number(result.interviewCoin) }))
+                }
+            })
+            .catch((error) => {
+                if (active) setHistoryError(error.response?.data?.message || "Could not load coin activity.")
+            })
+            .finally(() => { if (active) setHistoryLoading(false) })
+        return () => { active = false }
+    }, [setUser])
+
+    const handlePayment = async (selectedPlan) => {
+        if (selectedPlan.disabled || checkoutPlan) return
+        setCheckoutPlan(selectedPlan.title)
+        setCheckoutError("")
+
         try {
-            const result = await api.post("/api/billing/create",
-                { planId: plan.title.toLowerCase() })
+            const result = await api.post("/api/billing/create", { planId: selectedPlan.title.toLowerCase() })
+            const razorpayKey = result.data.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID
+            if (!razorpayKey) throw new Error("Razorpay test key ID is missing. Set VITE_RAZORPAY_KEY_ID in frontend/.env and restart the frontend.")
+            if (!window.Razorpay) throw new Error("Razorpay Checkout did not load. Refresh the page and try again.")
 
             const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+                key: razorpayKey,
                 amount: result.data.order.amount,
                 currency: result.data.order.currency,
                 name: "Intervue AI",
-                description: `${plan.title} - ${plan.coins} Interview Coins`,
+                description: `${selectedPlan.title} - ${selectedPlan.coins} Interview Coins`,
                 order_id: result.data.order.id,
-
-                handler: async function (response) {
+                handler: async (paymentResponse) => {
                     try {
-                        await api.post("/api/billing/verify", response)
-
-                        const coinRes = await api.post("/api/auth/add-coins", { coins: plan.coins })
-
-                        setUser((prev) => ({
-                            ...prev, interviewCoin: coinRes.data.interviewCoin
-                        }))
-
-                        alert("Payment Successful 🎉")
+                        const verification = await api.post("/api/billing/verify", paymentResponse)
+                        setUser((current) => ({ ...current, interviewCoin: verification.data.interviewCoin }))
                         navigate("/dashboard")
-
                     } catch (error) {
-                        console.log(error);
-
-                        alert(
-                            error?.response?.data?.message ||
-                            "Payment verification failed"
-                        );
+                        setCheckoutError(error.response?.data?.message || "Payment verification failed. Contact support with your payment receipt.")
                     }
-
                 },
-
-
-                theme: {
-                    color: "#000000",
-                },
-
+                theme: { color: "#8bd8ff" },
+                modal: { ondismiss: () => setCheckoutPlan("") },
             }
 
-
-            const razorpay = new window.Razorpay(options);
+            const razorpay = new window.Razorpay(options)
+            razorpay.on("payment.failed", (event) => {
+                setCheckoutError(event.error?.description || "Payment failed. You can try again.")
+                setCheckoutPlan("")
+            })
             razorpay.open()
-
-
+            setCheckoutPlan("")
         } catch (error) {
-            console.log(error)
+            console.error("Could not start Razorpay checkout:", error)
+            setCheckoutError(error.response?.data?.message || error.message || "Could not start checkout. Please try again.")
+            setCheckoutPlan("")
         }
     }
+
     return (
-        <div className='min-h-screen bg-white text-[#0A0A0A]'>
+        <div className='min-h-screen bg-[var(--neo-paper)] text-black'>
             <motion.nav
-                initial={{ y: -60, opacity: 0 }}
+                initial={{ y: -50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                className='sticky top-0 z-20 border-b border-black/8 bg-white/80 backdrop-blur-xl'>
-                <div className='mx-auto flex h-12 max-w-7xl items-center justify-between px-3 sm:px-5'>
-                    <div onClick={() => navigate("/dashboard")}
-                        className='flex cursor-pointer items-center gap-1.5'>
-                        <span className='text-sm font-extrabold sm:text-base text-[#0A0A0A]'>Intervue AI</span>
-                        <span className='hidden rounded bg-black/5 px-1.5 py-0.5 text-[10px] text-black/50 sm:block'>Interview Coins</span>
-                    </div>
-
-                    <button onClick={() => setShowMenu(!showMenu)} className='flex h-8 w-8 items-center justify-center rounded-lg border border-black/15 text-black/60 transition hover:border-black/35 hover:text-[#0A0A0A]'>
-                        {showMenu ? <FiX size={16} /> : <FiMenu size={16} />}
-
-
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className='sticky top-0 z-20 border-b-2 border-black bg-[var(--neo-paper)]'
+            >
+                <div className='mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6'>
+                    <button type='button' onClick={() => navigate("/dashboard")} className='resume-home-button flex items-center gap-1.5 p-0'>
+                        <span className='text-sm font-extrabold sm:text-base'>Intervue AI</span>
+                        <span className='hidden border-2 border-black bg-sky-200 px-2 py-0.5 text-[10px] font-bold sm:block'>BILLING</span>
                     </button>
-
-                    {showMenu && (
-                        <>
-                            <div onClick={() => setShowMenu(false)} className='fixed inset-0 z-30 bg-black/20 lg:hidden' />
-
-                            <div className='absolute right-1 top-11 z-40 w-[240px] max-w-[calc(100vw-24px)] rounded-xl overflow-hidden bg-[#000000]/90 backdrop-blur-2xl border border-white/10 p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'>
-                                <div className='absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-transparent pointer-events-none' />
-
-                                <div className='relative flex items-center gap-2 border-b border-white/10 pb-3'>
-
-                                    <div className='flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-500/15 border border-yellow-400/20'>
-                                        <GiTwoCoins className='text-yellow-400 text-sm' />
-                                    </div>
-
-                                    <div>
-                                        <p className="text-[10px] text-white/40">
-                                            Available Coins
-                                        </p>
-                                        <h3 className='text-lg font-bold text-white'>{user?.interviewCoin}</h3>
-                                    </div>
-
-                                </div>
-
-                                <div className='relative mt-3.5 space-y-1.5'>
-                                    {[
-                                        { title: "Resume Builder", coin: "-10" },
-                                        { title: "Resume Scorer", coin: "-10" },
-                                        { title: "Roadmap Generator", coin: "-20" },
-                                        { title: "AI Interview", coin: "-50" },
-                                    ].map((item) => (
-                                        <div key={item.title} className='flex items-center justify-between rounded-lg bg-white/5 border border-white/8 px-2.5 py-1.5'>
-                                            <span className="text-xs text-white/70">
-                                                {item.title}
-                                            </span>
-                                            <span className="text-xs font-bold text-red-400">
-                                                {item.coin}
-                                            </span>
-
-                                        </div>
-                                    ))}
-
-                                </div>
-
-                                <div className='relative mt-3.5 rounded-lg border border-violet-400/20 bg-violet-500/10 p-2.5'>
-                                    <p className="text-[10px] leading-4 text-violet-300">
-                                        Every AI feature uses Interview Coins.
-                                        Buy more coins anytime to continue using
-                                        Resume Builder, Resume Scorer,
-                                        AI Interview and Roadmap Generator.
-                                    </p>
-
-                                </div>
-                            </div>
-
-                        </>
-                    )}
-
+                    <button type='button' onClick={() => navigate("/dashboard")} className='flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-extrabold sm:px-3'><FiArrowLeft /> <span className='hidden sm:inline'>Dashboard</span></button>
                 </div>
-
             </motion.nav>
 
-            <div className='mx-auto max-w-4xl px-4 py-6'>
+            <main className='mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12'>
+                <header className='mx-auto grid max-w-5xl items-center gap-6 lg:grid-cols-[minmax(0,1fr)_270px]'>
+                    <div>
+                        <p className='inline-flex items-center gap-2 border-2 border-black bg-sky-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] shadow-[3px_3px_0_#171717]'><GiTwoCoins size={14} /> Interview Coin Wallet</p>
+                        <h1 className='mt-4 text-3xl font-black leading-tight sm:text-5xl'>Invest in your next opportunity.</h1>
+                        <p className='mt-3 max-w-xl text-sm font-semibold leading-6 text-sky-950 sm:text-base'>Choose a coin package to keep practicing interviews, improving your resume, and building your career roadmap.</p>
+                    </div>
+                    <div className='flex items-center gap-4 border-2 border-black bg-yellow-200 p-4 shadow-[5px_5px_0_#171717] sm:p-5'>
+                        <span className='flex h-12 w-12 shrink-0 items-center justify-center border-2 border-black bg-white text-sky-900'><GiTwoCoins size={26} /></span>
+                        <div>
+                            <p className='text-[10px] font-black uppercase tracking-widest text-sky-950'>Coins remaining</p>
+                            <p className='mt-0.5 text-3xl font-black text-black'>{Number(user?.interviewCoin || 0).toLocaleString()}</p>
+                            <p className='text-[10px] font-semibold text-black/65'>Available to use</p>
+                        </div>
+                    </div>
+                </header>
 
-                <div className='text-center'>
-                    <h1 className="text-3xl font-bold text-[#0A0A0A]">
-                        Interview Coins
-                    </h1>
-                    <p className="mt-2 text-sm text-black/45">
-                        Use coins for Resume Scoring, Resume Builder, AI Interviews, and Roadmap Generation.
-                    </p>
-                </div>
-
-                <div className='mt-8 grid place-items-center gap-3 md:grid-cols-2'>
-                    {plan.map((plan) => (
-                        <PricingCard key={plan.title}
+                <div className='mx-auto mt-8 grid max-w-4xl items-stretch justify-items-center gap-6 md:grid-cols-2 md:gap-8'>
+                    {plans.map((plan) => (
+                        <PricingCard
+                            key={plan.title}
                             {...plan}
-                            onBuy={() => handlePayment(plan)} />
-                    ))
-                    }
-
+                            loading={checkoutPlan === plan.title}
+                            onBuy={() => handlePayment(plan)}
+                        />
+                    ))}
                 </div>
-            </div>
 
+                {checkoutError && <p role='alert' className='mx-auto mt-6 max-w-4xl border-2 border-black bg-red-100 p-4 text-sm font-bold text-red-950 shadow-[3px_3px_0_#171717]'>{checkoutError}</p>}
+
+                <section className='mx-auto mt-8 max-w-4xl border-2 border-black bg-sky-100 p-4 shadow-[5px_5px_0_#171717] sm:p-5' aria-labelledby='coin-usage-heading'>
+                    <div className='mb-4 flex flex-wrap items-end justify-between gap-2'>
+                        <div>
+                            <p className='text-[10px] font-black uppercase tracking-widest text-sky-950'>Your account activity</p>
+                            <h2 id='coin-usage-heading' className='mt-1 text-lg font-black'>Coin usage history</h2>
+                        </div>
+                        <span className='text-[10px] font-bold text-black/60'>Recent spending and coin purchases</span>
+                    </div>
+                    {historyError && <p role='alert' className='mb-3 border-2 border-black bg-red-100 p-3 text-xs font-bold text-red-950'>{historyError}</p>}
+                    {historyLoading ? (
+                        <div className='flex items-center gap-2 border-2 border-black bg-white p-4 text-xs font-bold text-sky-950'><FiClock className='animate-pulse' /> Loading coin activity...</div>
+                    ) : coinHistory.length === 0 ? (
+                        <div className='border-2 border-dashed border-black bg-white p-5 text-center'>
+                            <GiTwoCoins className='mx-auto mb-2 text-sky-900' size={24} />
+                            <p className='text-sm font-black'>No coin activity yet</p>
+                            <p className='mt-1 text-xs font-semibold text-black/60'>Feature usage and future coin purchases will appear here.</p>
+                        </div>
+                    ) : (
+                        <ul className='space-y-2'>
+                            {coinHistory.map((entry, index) => {
+                                const purchased = entry.kind === "purchase"
+                                const label = COIN_ACTION_LABELS[entry.action] || entry.action?.replaceAll("-", " ") || "Coin activity"
+                                return (
+                                    <li key={`${entry.action}-${entry.createdAt}-${index}`} className='flex items-center gap-3 border-2 border-black bg-white p-3'>
+                                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black ${purchased ? 'bg-sky-200 text-sky-950' : 'bg-yellow-200 text-black'}`}>
+                                            {purchased ? <FiArrowDownLeft size={17} /> : <FiArrowUpRight size={17} />}
+                                        </span>
+                                        <span className='min-w-0 flex-1'>
+                                            <span className='block truncate text-xs font-black capitalize text-black'>{label}</span>
+                                            <time className='mt-0.5 block text-[10px] font-semibold text-black/55' dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString()}</time>
+                                        </span>
+                                        <span className={`shrink-0 border border-black px-2 py-1 text-[10px] font-black ${purchased ? 'bg-sky-100 text-sky-950' : 'bg-yellow-100 text-black'}`}>
+                                            {purchased ? "+" : "−"}{entry.coins} coins
+                                        </span>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    )}
+                </section>
+
+                <section className='mx-auto mt-8 flex max-w-4xl items-start gap-3 border-2 border-black bg-white p-4 shadow-[4px_4px_0_#171717] sm:p-5'>
+                    <span className='flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black bg-sky-100'><FiLock className='text-sky-950' /></span>
+                    <div>
+                        <h2 className='text-sm font-black'>Secure checkout</h2>
+                        <p className='mt-1 text-xs font-semibold leading-5 text-black/65'>Payment is handled by Razorpay. Coins are added to your account after the payment is verified.</p>
+                    </div>
+                    <FiCheckCircle className='ml-auto mt-1 shrink-0 text-sky-900' size={18} />
+                </section>
+            </main>
         </div>
     )
 }

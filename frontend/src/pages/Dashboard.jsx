@@ -1,15 +1,20 @@
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useNavigate } from 'react-router-dom'
 import api from '../utils/axios'
 import { motion } from "motion/react"
 import { FiSidebar } from 'react-icons/fi'
 import { useEffect } from 'react'
-import { getAllInterviews } from '../apis/interview.api'
+import { deleteInterview, getAllInterviews } from '../apis/interview.api'
 import { signOut } from 'firebase/auth'
 import { auth } from '../utils/firebase'
 import Statbox from '../components/Statbox'
 import InterviewGraph from '../components/InterviewGraph'
+import InterviewProgress from '../components/InterviewProgress'
+import InterviewHistory from '../components/InterviewHistory'
+import PracticeStreaks from '../components/PracticeStreaks'
+import SkillRadarChart from '../components/SkillRadarChart'
+import WeeklyGoal from '../components/WeeklyGoal'
 function Dashboard({ user, setUser }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [moblieOpen, setMoblieOpen] = useState(false)
@@ -32,23 +37,42 @@ function Dashboard({ user, setUser }) {
   const [technicalCount, setTechnicalCount] = useState(0);
 
   const [hrCount, setHrCount] = useState(0);
+  const [interviews, setInterviews] = useState([])
+  const [historyError, setHistoryError] = useState("")
+  const [loadingInterviews, setLoadingInterviews] = useState(true)
 
   const navigate = useNavigate()
 
-  useEffect(() => {
-
-    const fetchInterviews = async () => {
-      const response = await getAllInterviews()
-      setStats(response.stats)
-      setTechnicalData(response.technicalData)
-      setHrData(response.hrData)
-      setTechnicalCount(response.technicalCount)
-      setHrCount(response.hrCount)
-    }
-
-    fetchInterviews()
-
+  const fetchInterviews = useCallback(async () => {
+      setLoadingInterviews(true)
+      try {
+        const response = await getAllInterviews()
+        if (!response?.success) {
+          setHistoryError("Interview history could not be loaded.")
+          return
+        }
+        setInterviews(response.interviews || [])
+        setStats(response.stats || {})
+        setTechnicalData(response.technicalData || [])
+        setHrData(response.hrData || [])
+        setTechnicalCount(response.technicalCount || 0)
+        setHrCount(response.hrCount || 0)
+      } catch (error) {
+        console.error("Could not load dashboard interview history:", error)
+        setHistoryError("Interview history could not be loaded. Refresh the page to try again.")
+      } finally {
+        setLoadingInterviews(false)
+      }
   }, [])
+
+  useEffect(() => {
+    fetchInterviews()
+  }, [fetchInterviews])
+
+  const handleDeleteInterview = async (interview) => {
+    await deleteInterview(interview._id)
+    await fetchInterviews()
+  }
 
   const handleLogout = async () => {
     try {
@@ -102,7 +126,7 @@ function Dashboard({ user, setUser }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <p className='text-black/40 text-[11px] md:text-xs font-medium mb-0.5'>Overview</p>
+              <p className='inline-block border-2 border-black bg-sky-200 px-2 py-0.5 text-[10px] md:text-xs font-extrabold uppercase tracking-wide mb-1'>Overview</p>
 
               <h2 className='text-lg md:text-xl font-bold text-[#0A0A0A]'>Hello, {user?.name?.split(" ")[0]} </h2>
 
@@ -180,6 +204,10 @@ function Dashboard({ user, setUser }) {
 
         </div>
 
+        <PracticeStreaks interviews={interviews} />
+        <WeeklyGoal interviews={interviews} />
+        <SkillRadarChart interviews={interviews} />
+
         <motion.div  
         initial={{ opacity: 0 }}
 
@@ -189,7 +217,7 @@ function Dashboard({ user, setUser }) {
 
           className="mb-3 md:mb-4">
 
-            <p className='text-black/40 text-[10px] font-semibold uppercase tracking-widest mt-2.5 mb-1'>
+            <p className='inline-block border-2 border-black bg-sky-200 px-2 py-0.5 text-black text-[10px] font-extrabold uppercase tracking-widest mt-2.5 mb-1'>
             Performance</p>
 
             <h3 className='text-[#0A0A0A] font-bold text-sm md:text-base mb-3 md:mb-4'>Interview History</h3>
@@ -204,6 +232,20 @@ function Dashboard({ user, setUser }) {
           hrData={hrData}
           hrCount={hrCount}
           />
+
+          <InterviewProgress interviews={interviews} loading={loadingInterviews} />
+
+          {historyError ? (
+            <p role="alert" className="mt-7 border-2 border-black bg-yellow-100 p-4 text-sm font-bold text-black">{historyError}</p>
+          ) : (
+            <InterviewHistory
+              interviews={interviews}
+              loading={loadingInterviews}
+              onOpenInterview={(interview) => navigate(interview.status === "completed" ? `/interview/${interview._id}/report` : `/interview/${interview._id}`)}
+              onStartInterview={() => navigate("/interview")}
+              onDeleteInterview={handleDeleteInterview}
+            />
+          )}
         
 
       </motion.main>

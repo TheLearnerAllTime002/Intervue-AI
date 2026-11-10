@@ -6,19 +6,24 @@ export const summaryAgent = async (data) => {
     try {
         const prompt = summaryPrompt(data)
 
-        const response = await llm.invoke(prompt)
+        const response = await llm.invoke(prompt, {
+            response_format: { type: "json_object" },
+            reasoning_format: "hidden",
+            max_tokens: 1600,
+        })
 
-        const cleaned = response.content
+        const content = Array.isArray(response.content)
+            ? response.content.map((part) => part.text || "").join("")
+            : response.content
+        const cleaned = content
         .replace(/```json/g, "")
         .replace(/```/g, "")
         .trim();
 
         return JSON.parse(cleaned)
     } catch (error) {
-        console.log("Summary Agent Parse Error");
-    console.log(response.content);
-
-    throw new Error("Failed to generate Summary");
+        console.error("Summary agent failed:", error.message)
+        throw new Error(`Failed to generate interview summary: ${error.message}`, { cause: error })
         
     }
 }

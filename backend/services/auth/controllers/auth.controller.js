@@ -7,10 +7,18 @@ import { app } from "../configs/firebase.js";
 import User from "../model/user.model.js";
 import  redis from "../../../shared/redis/redis.js";
 
+const COIN_ACTIONS = {
+  "resume-scorer": { coins: 10 },
+  "start-interview": { coins: 50 },
+  "roadmap-builder": { coins: 20 },
+  "download-pdf": { coins: 10 },
+  "cover-letter": { coins: 20 },
+};
+
 const sessionCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  secure: true,
+  sameSite: "none",
   maxAge: 1000 * 60 * 60 * 24 * 7,
 };
 
@@ -75,8 +83,16 @@ export const login = async (req, res) => {
     return res.json({ success:true,user});
 
   } catch (error) {
-console.log(error)
-    return res.status(401).json({ message: error.message, });
+    const providerUnavailable = /\b(EACCES|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN)\b/i.test(
+      `${error?.message || ""} ${error?.cause?.code || ""}`
+    );
+
+    console.error("Firebase sign-in verification failed:", error?.code || "unknown", error?.message);
+    return res.status(providerUnavailable ? 503 : 401).json({
+      message: providerUnavailable
+        ? "Sign-in verification is temporarily unavailable. Please try again shortly."
+        : "Unable to verify the sign-in token. Please sign in again.",
+    });
 
   }
 
@@ -88,9 +104,9 @@ export const logout = async (req, res) => {
     const sessionId = req.cookies?.session;
 
     res.clearCookie("session", {
-      httpOnly: sessionCookieOptions.httpOnly,
-      secure: sessionCookieOptions.secure,
-      sameSite: sessionCookieOptions.sameSite,
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
     });
 
     if (sessionId) {
@@ -113,156 +129,68 @@ export const logout = async (req, res) => {
 };
 export const useInterviewCoins = async (req, res) => {
   try {
-const sessionId = req.cookies?.session;
+    const sessionId = req.cookies?.session;
 
-  if (!sessionId) {
-    return res.status(401).json({
-      success: false,
-      message: "Please sign in again",
-    });
-  }
-
-  const session = await redis.get(`session:${sessionId}`)
-
-  if (!session) {
-    return res.status(401).json({
-      success: false,
-      message: "Session expired. Please sign in again",
-    });
-  }
-
-  const sessionData = JSON.parse(session);
-
-    const { coins, action } = req.body;
-
-    if (!coins) {
-      return res.status(400).json({ 
-        success: false,
-        message: "Coins are required",
-      });
+    if (!sessionId) {
+      return res.status(401).json({ success: false, message: "Please sign in again" });
     }
 
-    const user = await User.findById(sessionData.userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+    const sessionRaw = await redis.get(`session:${sessionId}`);
+    if (!sessionRaw) {
+      return res.status(401).json({ success: false, message: "Session expired. Please sign in again" });
     }
 
-    // Not enough coins
-    if (user.interviewCoin < coins) {
+    const sessionData = JSON.parse(sessionRaw);
+    const { coins, action } = req.body ?? {};
+    const coinAction = COIN_ACTIONS[action];
+
+    if (!coinAction || !Number.isInteger(coins) || coins !== coinAction.coins) {
+      return res.status(400).json({ success: false, message: "Choose a valid coin action and cost." });
+    }
+
+    const currentCoins = Number(sessionData.interviewCoin) || 0;
+    if (currentCoins < coinAction.coins) {
       return res.status(403).json({
         success: false,
         message: "Not enough interview coins",
-        interviewCoin: user.interviewCoin,
+        interviewCoin: currentCoins,
       });
     }
 
-    // Deduct coins
-    user.interviewCoin -= coins;
-
-    await user.save();
-    await redis.set(`session:${sessionId}`, JSON.stringify({
-        userId:
-        user._id,
-
-        name:
-        user.name,
-
-        email:
-        user.email,
-
-        interviewCoin:
-        user.interviewCoin
-
-      }),"EX", 60 * 60 * 24 * 7);
-
+    const newBalance = currentCoins - coinAction.coins;
+    sessionData.interviewCoin = newBalance;
+    const historyEntry = { kind: "usage", action, coins: coinAction.coins, createdAt: new Date().toISOString() };
+    sessionData.coinHistory = [...(sessionData.coinHistory || []).slice(-99), historyEntry];
+    await redis.set(`session:${sessionId}`, JSON.stringify(sessionData), "EX", 60 * 60 * 24 * 7);
 
     return res.status(200).json({
       success: true,
       message: "Interview coins updated successfully",
       action,
-      interviewCoin: user.interviewCoin,
+      interviewCoin: newBalance,
     });
-
   } catch (error) {
-
     console.log(error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-
-
-
-export const addCoins = async (req, res) => {
+export const getCoinHistory = async (req, res) => {
   try {
     const sessionId = req.cookies?.session;
+    if (!sessionId) return res.status(401).json({ success: false, message: "Please sign in again." });
 
-    const session = await redis.get(`session:${sessionId}`);
+    const sessionRaw = await redis.get(`session:${sessionId}`);
+    if (!sessionRaw) return res.status(401).json({ success: false, message: "Session expired. Please sign in again." });
 
-    if (!session) {
-      return res.status(401).json({
-        success: false,
-        message: "Session expired",
-      });
-    }
-
-    const sessionData = JSON.parse(session);
-
-    const { coins } = req.body;
-
-    if (!coins || coins <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid coins are required",
-      });
-    }
-
-    const user = await User.findById(sessionData.userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    user.interviewCoin += Number(coins);
-
-    await user.save();
-
-    // Update Redis Session
-    await redis.set(
-      `session:${sessionId}`,
-      JSON.stringify({
-        userId: user._id,
-        name: user.name,
-        email: user.email,
-        interviewCoin: user.interviewCoin,
-      }),
-      "EX",
-      60 * 60 * 24 * 7
-    );
-
+    const sessionData = JSON.parse(sessionRaw);
     return res.status(200).json({
       success: true,
-      message: "Coins added successfully",
-      interviewCoin: user.interviewCoin,
+      interviewCoin: sessionData.interviewCoin ?? 0,
+      transactions: sessionData.coinHistory ?? [],
     });
   } catch (error) {
-    console.log(error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    console.error("Could not load coin history:", error.message);
+    return res.status(500).json({ success: false, message: "Could not load coin history." });
   }
 };

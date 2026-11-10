@@ -8,11 +8,17 @@ const InterviewState = Annotation.Root({
 
     role: Annotation(),
 
+    difficultyMode: Annotation(),
+
+    companyName: Annotation(),
+
     useResume: Annotation(),
 
     resume: Annotation(),
 
     questions: Annotation(),
+
+    askedQuestions: Annotation(),
 
     question: Annotation(),
 
@@ -21,6 +27,8 @@ const InterviewState = Annotation.Root({
     difficulty: Annotation(),
 
     feedback: Annotation(),
+
+    nextQuestion: Annotation(),
 
     report: Annotation(),
 

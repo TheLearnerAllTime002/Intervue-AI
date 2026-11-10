@@ -1,4 +1,3 @@
-import React from 'react'
 import { Routes , Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
@@ -15,6 +14,10 @@ import InterviewPage from './pages/InterviewPage'
 import InterviewReport from './pages/InterviewReport'
 import Roadmap from './pages/Roadmap'
 import Billing from './pages/Billing'
+import Applications from './pages/Applications'
+import Contact from './pages/Contact'
+import QuestionBanks from './pages/QuestionBanks'
+import CoverLetter from './pages/CoverLetter'
 
 function App() {
   const [user,setUser]= useState(null)
@@ -67,6 +70,8 @@ function App() {
       user ? <Navigate to="/dashboard" replace/> : <Home setUser={setUser}/>
       }/>
 
+    <Route path='/contact' element={<Contact/>}/>
+
     <Route path='/dashboard' element={
       user ? <Dashboard user={user} setUser={setUser}/> 
       : <Navigate to="/" replace/> }/>
@@ -97,6 +102,18 @@ function App() {
 
       <Route path='/billing' element={
       user ? <Billing user={user} setUser={setUser}/> 
+      : <Navigate to="/" replace/> }/>
+
+      <Route path='/applications' element={
+      user ? <Applications />
+      : <Navigate to="/" replace/> }/>
+
+      <Route path='/question-banks' element={
+      user ? <QuestionBanks user={user} setUser={setUser} />
+      : <Navigate to="/" replace/> }/>
+
+      <Route path='/cover-letter' element={
+      user ? <CoverLetter user={user} setUser={setUser} />
       : <Navigate to="/" replace/> }/>
 
 
