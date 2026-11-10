@@ -4,6 +4,7 @@
     "gateway": {
       "root": "backend/gateway",
       "framework": "express",
+      "installCommand": "npm ci && npm ci --prefix ../../shared",
       "bindings": [
         {
           "type": "service",
@@ -39,23 +40,28 @@
     },
     "auth": {
       "root": "backend/services/auth",
-      "framework": "express"
+      "framework": "express",
+      "installCommand": "npm ci && npm ci --prefix ../../shared"
     },
     "billing": {
       "root": "backend/services/billing",
-      "framework": "express"
+      "framework": "express",
+      "installCommand": "npm ci && npm ci --prefix ../../shared"
     },
     "interview": {
       "root": "backend/services/interview",
-      "framework": "express"
+      "framework": "express",
+      "installCommand": "npm ci && npm ci --prefix ../../shared"
     },
     "resume": {
       "root": "backend/services/resume",
-      "framework": "express"
+      "framework": "express",
+      "installCommand": "npm ci && npm ci --prefix ../../shared"
     },
     "roadmap": {
       "root": "backend/services/roadmap",
-      "framework": "express"
+      "framework": "express",
+      "installCommand": "npm ci && npm ci --prefix ../../shared"
     },
     "frontend": {
       "root": "frontend",
