@@ -4,7 +4,7 @@
     "gateway": {
       "root": "backend/gateway",
       "framework": "express",
-      "installCommand": "npm ci && npm ci --prefix ../../shared",
+      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts",
       "bindings": [
         {
           "type": "service",
@@ -41,27 +41,27 @@
     "auth": {
       "root": "backend/services/auth",
       "framework": "express",
-      "installCommand": "npm ci && npm ci --prefix ../../shared"
+      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
     },
     "billing": {
       "root": "backend/services/billing",
       "framework": "express",
-      "installCommand": "npm ci && npm ci --prefix ../../shared"
+      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
     },
     "interview": {
       "root": "backend/services/interview",
       "framework": "express",
-      "installCommand": "npm ci && npm ci --prefix ../../shared"
+      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
     },
     "resume": {
       "root": "backend/services/resume",
       "framework": "express",
-      "installCommand": "npm ci && npm ci --prefix ../../shared"
+      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
     },
     "roadmap": {
       "root": "backend/services/roadmap",
       "framework": "express",
-      "installCommand": "npm ci && npm ci --prefix ../../shared"
+      "installCommand": "npm install --ignore-scripts && npm install --prefix ../../shared --ignore-scripts"
     },
     "frontend": {
       "root": "frontend",
