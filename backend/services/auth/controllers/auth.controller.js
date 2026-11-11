@@ -15,11 +15,16 @@ const COIN_ACTIONS = {
   "cover-letter": { coins: 20 },
 };
 
-const sessionCookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  maxAge: 1000 * 60 * 60 * 24 * 7,
+const getSessionCookieOptions = (req) => {
+  const forwardedProtocol = req.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const isHttps = forwardedProtocol === "https" || req.protocol === "https";
+
+  return {
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: isHttps ? "none" : "lax",
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  };
 };
 
 
@@ -78,7 +83,7 @@ export const login = async (req, res) => {
 
       }),"EX", 60 * 60 * 24 * 7);
 
-    res.cookie("session", sessionId, sessionCookieOptions);
+    res.cookie("session", sessionId, getSessionCookieOptions(req));
 
     return res.json({ success:true,user});
 
@@ -103,11 +108,8 @@ export const logout = async (req, res) => {
 
     const sessionId = req.cookies?.session;
 
-    res.clearCookie("session", {
-      httpOnly: true,
-      secure: sessionCookieOptions.secure,
-      sameSite: sessionCookieOptions.sameSite,
-    });
+    const cookieOptions = getSessionCookieOptions(req);
+    res.clearCookie("session", cookieOptions);
 
     if (sessionId) {
       await redis.del(`session:${sessionId}`);
