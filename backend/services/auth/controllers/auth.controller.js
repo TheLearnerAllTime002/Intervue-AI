@@ -17,8 +17,8 @@ const COIN_ACTIONS = {
 
 const sessionCookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: "none",
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 1000 * 60 * 60 * 24 * 7,
 };
 
@@ -105,8 +105,8 @@ export const logout = async (req, res) => {
 
     res.clearCookie("session", {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: sessionCookieOptions.secure,
+      sameSite: sessionCookieOptions.sameSite,
     });
 
     if (sessionId) {

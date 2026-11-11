@@ -1,5 +1,14 @@
 # Local backend services
 
+From the repository root, run `npm run dev`. This creates only missing `.env`
+files, starts MongoDB and Redis with Docker Compose, and starts the frontend,
+gateway, and all backend services. Existing `.env` files are never overwritten.
+
+Before the first run, fill in the credentials marked as placeholders in the
+generated service environment files. Firebase credentials are required for
+authentication, GROQ is required by the AI services, and Razorpay credentials
+are required for billing.
+
 The local services use MongoDB at `127.0.0.1:27017` and Redis at `127.0.0.1:6380`.
 Start both dependencies from the repository root:
 

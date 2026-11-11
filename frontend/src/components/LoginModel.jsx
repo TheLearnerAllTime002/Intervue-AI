@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { FiArrowRight, FiLock, FiX } from "react-icons/fi";
 import { motion } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
-import { signInWithPopup, signOut } from 'firebase/auth';
+import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
 import api from '../utils/axios';
 
@@ -15,11 +15,9 @@ function LoginModel({ onClose, setUser }) {
         setIsSigningIn(true)
         setErrorMessage('')
         try {
-            // Clear Firebase's persisted account before opening the chooser so
-            // switching Google accounts does not reuse the previous session.
-            if (auth.currentUser) {
-                await signOut(auth)
-            }
+            // Open the popup directly from the click handler. Awaiting another
+            // Firebase operation first can consume the browser user gesture
+            // and cause the popup to be blocked.
             const result = await signInWithPopup(auth, provider)
             const token = await result.user.getIdToken()
             const response = await api.post("/api/auth/login", { token })

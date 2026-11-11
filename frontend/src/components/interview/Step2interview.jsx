@@ -14,6 +14,7 @@ const navigate = useNavigate()
   const [question, setQuestion] = useState(interviewData.question);
   const [currentIndex, setCurrentIndex] = useState(interviewData.currentQuestion || 0);
   const [answer, setAnswer] = useState("");
+  const [speechPreview, setSpeechPreview] = useState("");
   const [feedback, setFeedback] = useState(null);
   const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,6 @@ const navigate = useNavigate()
   const aiVideoRef = useRef(null);
   const userVideoRef = useRef(null);
   const recognitionRef = useRef(null);
-  const recognitionActiveRef = useRef(false);
   const micOnRef = useRef(micOn);
   const aiPlayingRef = useRef(false);
   const streamRef = useRef(null);
@@ -51,88 +51,64 @@ const navigate = useNavigate()
 
   // Speech recognition
   useEffect(()=>{
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition
     if(!SpeechRecognition) {
-      window.setTimeout(() => {
-        setSpeechError("Speech-to-text is not supported in this browser. Use Chrome or Edge.")
-      }, 0)
+      setSpeechError("Speech-to-text is not supported in this browser. Use Chrome or Edge.")
       return
     }
+
     const rec = new SpeechRecognition()
     rec.lang = "en-US";
     rec.continuous = true;
-    rec.interimResults = true;
+    rec.interimResults = false;
     rec.maxAlternatives = 1;
-    let finalTranscript = ""
     rec.onresult = (e)=>{
-      let interim = ""
-      for(let i = e.resultIndex; i < e.results.length; i++){
-        const t = e.results[i][0].transcript
-        if(e.results[i].isFinal){ finalTranscript += " " + t }
-        else { interim = t }
-      }
-      if(finalTranscript.trim()) setAnswer((prev) => (prev + finalTranscript).trimStart())
-      finalTranscript = ""
-      void interim
-    }
-    rec.onstart = () => {
-      recognitionActiveRef.current = true
-      setSpeechError("")
-    }
-    rec.onend = () => {
-      recognitionActiveRef.current = false
-      if (micOnRef.current && !aiPlayingRef.current) {
-        setTimeout(() => startMic(), 200)
-      }
+      const transcript = e.results[e.results.length - 1][0].transcript
+      setAnswer((previousAnswer) => `${previousAnswer} ${transcript}`.trim())
+      setSpeechPreview("")
     }
     rec.onerror = (e) => {
-      recognitionActiveRef.current = false
       if (["not-allowed", "service-not-allowed", "audio-capture"].includes(e.error)) {
         micOnRef.current = false
         setMicOn(false)
+        setSpeechPreview("")
         setSpeechError(
           e.error === "audio-capture"
             ? "No microphone was found. Connect a microphone and try again."
             : "Microphone access was denied. Allow microphone access and enable the mic again."
         )
-        return
-      }
-      if (micOnRef.current && !aiPlayingRef.current) {
-        setTimeout(() => startMic(), e.error === "no-speech" ? 200 : 500)
       }
     }
     recognitionRef.current = rec
 
     return () => {
-      if (recognitionActiveRef.current) rec.abort()
-      recognitionActiveRef.current = false
+      rec.stop()
       recognitionRef.current = null
     }
   },[])
 
   useEffect(() => () => {
-    if (recognitionRef.current && recognitionActiveRef.current) recognitionRef.current.abort()
+    recognitionRef.current?.stop()
     streamRef.current?.getTracks().forEach((track) => track.stop())
     window.speechSynthesis?.cancel()
   }, [])
 
-
   const startMic = ()=>{
-    const recognition = recognitionRef.current
-    if (!recognition || recognitionActiveRef.current) return
     try {
-      recognition.start()
+      recognitionRef.current?.start()
+      setSpeechError("")
     } catch (error) {
-      recognitionActiveRef.current = false
-      if (error.name !== "InvalidStateError") console.error("Could not start speech recognition:", error)
+      if (error.name !== "InvalidStateError") {
+        console.error("Could not start speech recognition:", error)
+        setSpeechError("Could not start the microphone. Check your browser permission.")
+      }
     }
   }
+
   const stopMic = ()=>{
-    if (!recognitionRef.current || !recognitionActiveRef.current) return
     try {
-      recognitionRef.current.stop()
+      recognitionRef.current?.stop()
     } catch (error) {
-      recognitionActiveRef.current = false
       if (error.name !== "InvalidStateError") {
         console.error("Could not stop speech recognition:", error)
       }
@@ -140,7 +116,7 @@ const navigate = useNavigate()
   }
 
   useEffect(() => {
-    if (recognitionRef.current && micOn && !isAIPlaying) {
+    if (micOn && !isAIPlaying) {
       startMic()
     }
   }, [micOn, isAIPlaying])
@@ -242,7 +218,7 @@ const navigate = useNavigate()
           aiPlayingRef.current = false
           aiVideoRef.current?.pause()
           setIsAIPlaying(false)
-          if(micOnRef.current) setTimeout(() => startMic(), 300)
+          if(micOnRef.current) startMic()
           setTimeout(()=>{ setSubtitle("");resolve() },300)
         }
         setSubtitle(text)
@@ -559,8 +535,8 @@ const navigate = useNavigate()
           <div className='flex-1 flex flex-col min-h-0'>
             <label className='text-xs font-medium text-zinc-400 mb-1.5'>Your Answer</label>
             <textarea
-            onChange={(e)=>{ setAnswer(e.target.value); setFeedback(null); setSubmitError("") }}
-            value={answer}
+            onChange={(e)=>{ setSpeechPreview(""); setAnswer(e.target.value); setFeedback(null); setSubmitError("") }}
+            value={speechPreview ? `${answer}${answer.trim() ? " " : ""}${speechPreview}` : answer}
             rows={5}
             onKeyDown={(e)=>{if(e.ctrlKey && e.key === "Enter") submit()}}
             placeholder='Write your answer here… or speak if mic is on'

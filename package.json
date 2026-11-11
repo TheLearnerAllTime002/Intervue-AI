@@ -1,0 +1,16 @@
+{
+  "name": "intervue-ai",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup:local": "node scripts/setup-local.js",
+    "dev": "node scripts/dev-local.js",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint"
+  },
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=7.0.0"
+  }
+}
