@@ -23,7 +23,7 @@ const getServiceUrl = (name) => {
 }
 
 const frontendOrigin = process.env.FRONTEND_URL?.replace(/\/+$/, "")
-const authServiceUrl = getServiceUrl("AUTH_SERVICE_URL")
+const authServiceUrl = "https://auth-9wnc.onrender.com"
 const resumeServiceUrl = getServiceUrl("RESUME_SERVICE_URL")
 const interviewServiceUrl = getServiceUrl("INTERVIEW_SERVICE_URL")
 const roadmapServiceUrl = getServiceUrl("ROADMAP_SERVICE_URL")
