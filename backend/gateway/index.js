@@ -14,7 +14,20 @@ import { proxyWithHeaders } from "./utils/proxyWithHeaders.js"
 import { sendContactMessage } from "./controllers/contact.controller.js"
 const app = express()
 
+const getServiceUrl = (name) => {
+    const value = process.env[name]?.trim().replace(/^["']|["']$/g, "").replace(/\/+$/, "")
+    if (!value) {
+        throw new Error(`${name} is missing from the gateway environment`)
+    }
+    return value
+}
+
 const frontendOrigin = process.env.FRONTEND_URL?.replace(/\/+$/, "")
+const authServiceUrl = getServiceUrl("AUTH_SERVICE_URL")
+const resumeServiceUrl = getServiceUrl("RESUME_SERVICE_URL")
+const interviewServiceUrl = getServiceUrl("INTERVIEW_SERVICE_URL")
+const roadmapServiceUrl = getServiceUrl("ROADMAP_SERVICE_URL")
+const billingServiceUrl = getServiceUrl("BILLING_SERVICE_URL")
 
 app.use(cors({
     origin: frontendOrigin,
@@ -33,7 +46,7 @@ app.get("/" , (req,res)=>{
 })
 
 
-app.use("/api/auth" , proxy(process.env.AUTH_SERVICE_URL, {
+app.use("/api/auth" , proxy(authServiceUrl, {
     parseReqBody: false,
     proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
         if (srcReq.cookies?.session) {
@@ -42,10 +55,10 @@ app.use("/api/auth" , proxy(process.env.AUTH_SERVICE_URL, {
         return proxyReqOpts
     }
 }))
-app.use("/api/resume" ,isAuth, proxyWithHeaders(process.env.RESUME_SERVICE_URL))
-app.use("/api/interview",isAuth ,proxyWithHeaders(process.env.INTERVIEW_SERVICE_URL))
-app.use("/api/roadmap",isAuth ,proxyWithHeaders(process.env.ROADMAP_SERVICE_URL))
-app.use("/api/billing",isAuth ,proxyWithHeaders(process.env.BILLING_SERVICE_URL))
+app.use("/api/resume" ,isAuth, proxyWithHeaders(resumeServiceUrl))
+app.use("/api/interview",isAuth ,proxyWithHeaders(interviewServiceUrl))
+app.use("/api/roadmap",isAuth ,proxyWithHeaders(roadmapServiceUrl))
+app.use("/api/billing",isAuth ,proxyWithHeaders(billingServiceUrl))
 app.get("/api/me",isAuth,getCurrentUser)
 
 // Keep body parsing after proxy routes. The proxy must read the original
