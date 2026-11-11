@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { FiArrowRight, FiLock, FiX } from "react-icons/fi";
 import { motion } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
-import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
+import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
 import api from '../utils/axios';
 
@@ -26,8 +26,7 @@ function LoginModel({ onClose, setUser }) {
             onClose()
         } catch (error) {
             if (error.code === 'auth/popup-blocked') {
-                setErrorMessage('Popup blocked. Redirecting to Google sign-in...')
-                await signInWithRedirect(auth, provider)
+                setErrorMessage('Your browser blocked the sign-in popup. Allow popups for this site and try again.')
                 return
             }
             if (error.code !== 'auth/cancelled-popup-request' && error.code !== 'auth/popup-closed-by-user') {
