@@ -8,12 +8,16 @@ dotenv.config()
 
 const app = express()
 app.use(express.json())
-app.use(requireGateway)
 
 const PORT = process.env.PORT || 8004
 
 // Reload MongoDB and Redis endpoints from this service's local environment on restart.
 
+app.get("/", (_req, res) => {
+    res.send("Hello from Roadmap-service")
+})
+
+app.use(requireGateway)
 app.use("/",roadmapRouter)
 
 const start = async () => {
