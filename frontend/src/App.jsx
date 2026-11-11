@@ -37,12 +37,16 @@ function App() {
           const token = await redirectResult.user.getIdToken()
           const response = await api.post("/api/auth/login", { token })
           setUser(response?.data?.user)
-        } else {
+        } else if (auth.currentUser) {
           const data = await getCurrentUser()
           setUser(data?.user)
+        } else {
+          setUser(null)
         }
       } catch (error) {
-        console.error("Could not complete Google sign-in:", error)
+        if (error.code !== 'auth/no-auth-event') {
+          console.error("Could not complete Google sign-in:", error)
+        }
         setUser(null)
       } finally {
         setLoading(false)

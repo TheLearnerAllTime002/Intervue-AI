@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { FiArrowRight, FiLock, FiX } from "react-icons/fi";
 import { motion } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
@@ -10,6 +10,23 @@ function LoginModel({ onClose, setUser }) {
     const [isSigningIn, setIsSigningIn] = useState(false)
     const [errorMessage, setErrorMessage] = useState('')
 
+    const loginWithRetry = async (token) => {
+        let lastError
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+                return await api.post("/api/auth/login", { token })
+            } catch (error) {
+                lastError = error
+                const status = error.response?.status
+                if (![502, 503, 504].includes(status) || attempt === 2) {
+                    throw error
+                }
+                await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)))
+            }
+        }
+        throw lastError
+    }
+
     const handleGoogleAuth = async () => {
         if (isSigningIn) return
         setIsSigningIn(true)
@@ -20,7 +37,7 @@ function LoginModel({ onClose, setUser }) {
             // and cause the popup to be blocked.
             const result = await signInWithPopup(auth, provider)
             const token = await result.user.getIdToken()
-            const response = await api.post("/api/auth/login", { token })
+            const response = await loginWithRetry(token)
 
             setUser(response?.data?.user)
             onClose()
@@ -31,7 +48,10 @@ function LoginModel({ onClose, setUser }) {
                 return
             }
             if (error.code !== 'auth/cancelled-popup-request' && error.code !== 'auth/popup-closed-by-user') {
-                setErrorMessage(error.response?.data?.message || 'Unable to sign in. Please try again.')
+                const message = [502, 503, 504].includes(error.response?.status)
+                    ? 'Sign-in service is waking up. Please try again in a moment.'
+                    : error.response?.data?.message || 'Unable to sign in. Please try again.'
+                setErrorMessage(message)
                 console.error('Google sign-in failed:', error)
             }
         } finally {
