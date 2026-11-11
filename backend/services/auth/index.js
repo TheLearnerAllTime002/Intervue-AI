@@ -17,6 +17,10 @@ const PORT = process.env.PORT || 8001
 
 // Reload MongoDB and Redis endpoints from this service's local environment on restart.
 
+app.get("/", (_req, res) => {
+  res.send("Hello from Auth-service");
+});
+
 app.use("/",authRouter);
 
 
