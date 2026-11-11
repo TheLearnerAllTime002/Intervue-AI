@@ -18,6 +18,9 @@ import Applications from './pages/Applications'
 import Contact from './pages/Contact'
 import QuestionBanks from './pages/QuestionBanks'
 import CoverLetter from './pages/CoverLetter'
+import { getRedirectResult } from 'firebase/auth'
+import { auth } from './utils/firebase'
+import api from './utils/axios'
 
 function App() {
   const [user,setUser]= useState(null)
@@ -29,10 +32,17 @@ function App() {
 
     const getUser = async () => {
       try {
-        const data = await getCurrentUser()
-        setUser(data?.user)
+        const redirectResult = await getRedirectResult(auth)
+        if (redirectResult?.user) {
+          const token = await redirectResult.user.getIdToken()
+          const response = await api.post("/api/auth/login", { token })
+          setUser(response?.data?.user)
+        } else {
+          const data = await getCurrentUser()
+          setUser(data?.user)
+        }
       } catch (error) {
-        console.error("Could not load the current user:", error)
+        console.error("Could not complete Google sign-in:", error)
         setUser(null)
       } finally {
         setLoading(false)
