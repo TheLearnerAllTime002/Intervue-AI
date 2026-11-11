@@ -10,7 +10,6 @@ dotenv.config({ path: fileURLToPath(new URL("./.env", import.meta.url)) })
 
 const app = express()
 app.use(express.json())
-app.use(requireGateway)
 
 const PORT = process.env.PORT || 8005
 
@@ -20,6 +19,7 @@ app.get("/",(req,res)=>{
     res.send("Hello from Billing-service")
 })
 
+app.use(requireGateway)
 app.use("/",billingRouter)
 
 const start = async () => {
