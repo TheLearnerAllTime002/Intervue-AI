@@ -17,7 +17,10 @@ const COIN_ACTIONS = {
 
 const getSessionCookieOptions = (req) => {
   const forwardedProtocol = req.get("x-forwarded-proto")?.split(",")[0]?.trim();
-  const isHttps = forwardedProtocol === "https" || req.protocol === "https";
+  const isHttps =
+    process.env.NODE_ENV === "production" ||
+    forwardedProtocol === "https" ||
+    req.protocol === "https";
 
   return {
     httpOnly: true,
