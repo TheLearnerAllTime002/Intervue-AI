@@ -1,5 +1,5 @@
-const CACHE_NAME = "intervue-ai-shell-v1";
-const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/pwa-icon.svg", "/pwa-192.png", "/pwa-512.png"];
+const CACHE_NAME = "intervue-ai-shell-v2";
+const APP_SHELL = ["/manifest.webmanifest", "/pwa-icon.svg", "/pwa-192.png", "/pwa-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
