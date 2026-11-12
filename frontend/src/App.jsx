@@ -44,7 +44,7 @@ function App() {
           setUser(null)
         }
       } catch (error) {
-        if (error.code !== 'auth/no-auth-event') {
+        if (!['auth/no-auth-event', 'auth/missing-initial-state'].includes(error.code)) {
           console.error("Could not complete Google sign-in:", error)
         }
         setUser(null)

@@ -36,13 +36,16 @@ export const login = async (req, res) => {
 
   try {
 
-    const { token } = req.body;
+    const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
 
     if (!token) {
       return res.status(400).json({ message: "Firebase token is required" });
     }
 
     const decoded = await getAuth(app).verifyIdToken(token);
+    if (!decoded.uid || !decoded.email) {
+      return res.status(401).json({ message: "The Firebase token has no usable user identity." });
+    }
 
     let user = await User.findOne({
       $or: [
@@ -71,10 +74,10 @@ export const login = async (req, res) => {
     }
 
     const sessionId =crypto.randomUUID();
+    const userId = String(user._id);
 
     await redis.set(`session:${sessionId}`, JSON.stringify({
-        userId:
-        user._id,
+        userId,
 
         name:
         user.name,
@@ -92,15 +95,30 @@ export const login = async (req, res) => {
     return res.json({ success:true,user});
 
   } catch (error) {
+    if (error?.code === 11000) {
+      console.error("Could not save authenticated user:", error.message);
+      return res.status(409).json({
+        message: "Your account could not be linked because the email is already in use.",
+      });
+    }
+
     const providerUnavailable = /\b(EACCES|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN)\b/i.test(
       `${error?.message || ""} ${error?.cause?.code || ""}`
     );
+    const firebaseTokenError = [
+      "auth/id-token-expired",
+      "auth/id-token-revoked",
+      "auth/invalid-id-token",
+      "auth/argument-error",
+    ].includes(error?.code);
 
-    console.error("Firebase sign-in verification failed:", error?.code || "unknown", error?.message);
-    return res.status(providerUnavailable ? 503 : 401).json({
+    console.error("Google sign-in failed:", error?.code || "unknown", error?.message);
+    return res.status(providerUnavailable ? 503 : firebaseTokenError ? 401 : 500).json({
       message: providerUnavailable
         ? "Sign-in verification is temporarily unavailable. Please try again shortly."
-        : "Unable to verify the sign-in token. Please sign in again.",
+        : firebaseTokenError
+          ? "Unable to verify the sign-in token. Please sign in again."
+          : "Could not complete sign-in. Please try again.",
     });
 
   }

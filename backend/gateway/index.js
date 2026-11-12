@@ -11,6 +11,7 @@ import cookieParser from "cookie-parser"
 import { getCurrentUser } from "./controllers/user.controller.js"
 import { isAuth } from "./middleware/isAuth.js"
 import { proxyWithHeaders } from "./utils/proxyWithHeaders.js"
+import { proxyErrorHandler } from "./utils/proxyErrorHandler.js"
 import { sendContactMessage } from "./controllers/contact.controller.js"
 const app = express()
 
@@ -23,6 +24,9 @@ const getServiceUrl = (name) => {
 }
 
 const frontendOrigin = process.env.FRONTEND_URL?.replace(/\/+$/, "")
+if (process.env.NODE_ENV === "production" && !frontendOrigin) {
+    throw new Error("FRONTEND_URL is required in production")
+}
 const authServiceUrl = "https://auth-9wnc.onrender.com"
 const resumeServiceUrl = "https://resume-r5kw.onrender.com"
 const interviewServiceUrl = "https://interview-y5ql.onrender.com"
@@ -48,6 +52,7 @@ app.get("/" , (req,res)=>{
 
 app.use("/api/auth" , proxy(authServiceUrl, {
     parseReqBody: false,
+    proxyErrorHandler,
     proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
         if (srcReq.cookies?.session) {
             proxyReqOpts.headers["cookie"] = `session=${srcReq.cookies.session}`
@@ -68,7 +73,17 @@ app.use(express.json())
 
 app.post("/api/contact", sendContactMessage)
 
+app.use((error, _req, res, next) => {
+    if (res.headersSent) {
+        return next(error)
+    }
 
+    console.error("Gateway upstream request failed:", error?.code || "unknown", error?.message)
+    return res.status(502).json({
+        success: false,
+        message: "The requested service is temporarily unavailable. Please try again shortly.",
+    })
+})
 
 
 app.listen(PORT , ()=>{

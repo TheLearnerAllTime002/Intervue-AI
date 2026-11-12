@@ -30,6 +30,12 @@ const readServiceAccount = () => {
     };
   }
 
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Firebase Admin credentials are missing in production. Configure FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY.",
+    );
+  }
+
   if (existsSync(localServiceAccountPath)) {
     return JSON.parse(readFileSync(localServiceAccountPath, "utf8"));
   }
