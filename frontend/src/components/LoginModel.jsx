@@ -32,7 +32,15 @@ function LoginModel({ onClose, setUser }) {
         } catch (error) {
             if (error.code === 'auth/popup-blocked') {
                 setErrorMessage('Popup blocked. Redirecting to Google sign-in...')
-                await signInWithRedirect(auth, provider)
+                try {
+                    await signInWithRedirect(auth, provider)
+                } catch (redirectError) {
+                    const message = redirectError.code === 'auth/network-request-failed'
+                        ? 'Google sign-in is being blocked by this browser or network. Disable privacy/ad-blocking extensions for this site and try again.'
+                        : 'Unable to open Google sign-in. Please try again.'
+                    setErrorMessage(message)
+                    console.error('Google redirect sign-in failed:', redirectError)
+                }
                 return
             }
             if (error.code !== 'auth/cancelled-popup-request' && error.code !== 'auth/popup-closed-by-user') {
