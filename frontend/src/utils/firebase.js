@@ -9,7 +9,9 @@ if (!firebaseApiKey) {
 
 const firebaseConfig = {
   apiKey: firebaseApiKey,
-  authDomain: "intervue-ai-003.firebaseapp.com",
+  // Use the app origin for the Firebase sign-in helper in production. Vercel
+  // proxies /__/auth/* to Firebase so browsers treat the flow as same-site.
+  authDomain: import.meta.env.PROD ? "intervue-ai-lwxh.vercel.app" : "intervue-ai-003.firebaseapp.com",
   projectId: "intervue-ai-003",
   storageBucket: "intervue-ai-003.firebasestorage.app",
   messagingSenderId: "660497983995",
