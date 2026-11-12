@@ -26,6 +26,7 @@ export const isAuth = async (req,res,next) => {
         next();
 
     } catch (error) {
-         return res.status(500).json({message:error.message});
+         console.error("Could not validate the user session:", error?.message);
+         return res.status(503).json({ message: "Session service is temporarily unavailable. Please try again shortly." });
     }
 }

@@ -27,11 +27,11 @@ const frontendOrigin = process.env.FRONTEND_URL?.replace(/\/+$/, "")
 if (process.env.NODE_ENV === "production" && !frontendOrigin) {
     throw new Error("FRONTEND_URL is required in production")
 }
-const authServiceUrl = "https://auth-9wnc.onrender.com"
-const resumeServiceUrl = "https://resume-r5kw.onrender.com"
-const interviewServiceUrl = "https://interview-y5ql.onrender.com"
-const roadmapServiceUrl = "https://roadmap-edxz.onrender.com"
-const billingServiceUrl = "https://billing-ecwc.onrender.com"
+const authServiceUrl = getServiceUrl("AUTH_SERVICE_URL")
+const resumeServiceUrl = getServiceUrl("RESUME_SERVICE_URL")
+const interviewServiceUrl = getServiceUrl("INTERVIEW_SERVICE_URL")
+const roadmapServiceUrl = getServiceUrl("ROADMAP_SERVICE_URL")
+const billingServiceUrl = getServiceUrl("BILLING_SERVICE_URL")
 
 app.use(cors({
     origin: frontendOrigin,
@@ -79,7 +79,7 @@ app.use((error, _req, res, next) => {
     }
 
     console.error("Gateway upstream request failed:", error?.code || "unknown", error?.message)
-    return res.status(502).json({
+    return res.status(503).json({
         success: false,
         message: "The requested service is temporarily unavailable. Please try again shortly.",
     })

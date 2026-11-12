@@ -43,16 +43,14 @@ export const login = async (req, res) => {
     }
 
     const decoded = await getAuth(app).verifyIdToken(token);
-    if (!decoded.uid || !decoded.email) {
+    if (!decoded.uid || !decoded.email || decoded.email_verified !== true) {
       return res.status(401).json({ message: "The Firebase token has no usable user identity." });
     }
 
-    let user = await User.findOne({
-      $or: [
-        { firebaseUid: decoded.uid },
-        { email: decoded.email },
-      ],
-    });
+    // Prefer the stable Firebase UID. Only link a legacy/email-matched record
+    // after Firebase has verified the address above.
+    let user = await User.findOne({ firebaseUid: decoded.uid });
+    if (!user) user = await User.findOne({ email: decoded.email });
 
     if (!user) {
 
@@ -62,14 +60,14 @@ export const login = async (req, res) => {
 
         email: decoded.email,
 
-        name: decoded.name
+        name: decoded.name || decoded.email.split("@")[0]
 
       });
     } else if (user.firebaseUid !== decoded.uid) {
       // The email was verified by Firebase. Re-linking the existing record
       // prevents duplicate-key failures after an account/provider migration.
       user.firebaseUid = decoded.uid;
-      user.name = decoded.name || user.name;
+      user.name = decoded.name || user.name || decoded.email.split("@")[0];
       await user.save();
     }
 
@@ -102,9 +100,10 @@ export const login = async (req, res) => {
       });
     }
 
-    const providerUnavailable = /\b(EACCES|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN)\b/i.test(
-      `${error?.message || ""} ${error?.cause?.code || ""}`
-    );
+    const providerUnavailable =
+      /\b(EACCES|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|MongooseServerSelectionError|MongoServerSelectionError)\b/i.test(
+        `${error?.message || ""} ${error?.cause?.code || ""}`
+      ) || ["MongooseServerSelectionError", "MongoServerSelectionError"].includes(error?.name);
     const firebaseTokenError = [
       "auth/id-token-expired",
       "auth/id-token-revoked",
