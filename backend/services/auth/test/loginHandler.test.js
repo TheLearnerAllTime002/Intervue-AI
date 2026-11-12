@@ -51,6 +51,25 @@ test("valid token creates one Redis session and issues a secure HTTP-only cookie
     assert.deepEqual(writes[0].slice(2), ["EX", SESSION_TTL_SECONDS]);
 });
 
+test("valid Google login replaces a stale cookie instead of requiring or trusting it", async () => {
+    const user = { _id: "mongo-user-id", firebaseUid: "firebase-uid", email: "person@example.com", name: "Person", interviewCoin: 250 };
+    const writes = [];
+    const res = createResponse();
+    const handler = createLoginHandler({
+        verifyIdToken: async () => ({ uid: "firebase-uid", email: user.email, email_verified: true }),
+        User: { findOne: async () => user, create: async () => assert.fail("existing user must not be recreated") },
+        redis: { set: async (...args) => writes.push(args) },
+        logger: () => {},
+    });
+
+    await handler({ ...createRequest(), cookies: { session: "stale-session-cookie" } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.cookieValue.name, "session");
+    assert.notEqual(res.cookieValue.value, "stale-session-cookie");
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0][0], `session:${res.cookieValue.value}`);
+});
+
 test("rejects an invalid Firebase token with 401", async () => {
     const res = createResponse();
     const handler = createLoginHandler({
