@@ -9,10 +9,7 @@ if (!firebaseApiKey) {
 
 const firebaseConfig = {
   apiKey: firebaseApiKey,
-  // In production the Firebase auth helper is reverse-proxied through the
-  // app's own Vercel origin. This avoids cross-site storage restrictions in
-  // normal browser profiles; local development keeps Firebase's default host.
-  authDomain: import.meta.env.PROD ? "intervue-ai-lwxh.vercel.app" : "intervue-ai-003.firebaseapp.com",
+  authDomain: "intervue-ai-003.firebaseapp.com",
   projectId: "intervue-ai-003",
   storageBucket: "intervue-ai-003.firebasestorage.app",
   messagingSenderId: "660497983995",

@@ -40,3 +40,11 @@ createRoot(document.getElementById('root')).render(
 
 window.addEventListener('focus', checkForNewDeployment)
 setInterval(checkForNewDeployment, 30_000)
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
+      console.error('Could not register the offline app shell:', error)
+    })
+  }, { once: true })
+}

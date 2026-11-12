@@ -1,5 +1,14 @@
 # React + Vite
 
+## Progressive Web App
+
+The production build includes a web app manifest, 192 and 512 pixel install
+icons, and a root-scoped service worker. The worker provides an offline app
+shell and caches only fingerprinted JavaScript and CSS. API routes and Firebase
+authentication are always network-only; signing in and loading account data
+requires an internet connection. Browsers expose installation through their
+Install app or Add to Home Screen menu when served over HTTPS.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
