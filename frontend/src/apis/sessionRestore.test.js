@@ -11,7 +11,7 @@ test("uses an existing backend session without logging in again", async () => {
     loginWithFirebaseUser: async () => { loginCalls += 1 },
   })
 
-  assert.equal((await restore(null)).user._id, "user-1")
+  assert.equal((await restore({ uid: "firebase-user-1" })).user._id, "user-1")
   assert.equal(loginCalls, 0)
 })
 
@@ -35,15 +35,32 @@ test("repairs one unauthorized session and verifies it again", async () => {
   assert.equal(logins, 1)
 })
 
-test("does not log in when there is no Firebase user and the backend returns 401", async () => {
+test("does not probe the backend when there is no Firebase user", async () => {
+  let reads = 0
   let loginCalls = 0
   const restore = createSessionRestorer({
-    getCurrentUser: async () => { throw httpError(401) },
+    getCurrentUser: async () => { reads += 1; throw httpError(401) },
     loginWithFirebaseUser: async () => { loginCalls += 1 },
   })
 
   assert.equal(await restore(null), null)
+  assert.equal(reads, 0)
   assert.equal(loginCalls, 0)
+})
+
+test("establishes popup login directly and verifies the issued backend session", async () => {
+  const calls = []
+  const restore = createSessionRestorer({
+    getCurrentUser: async () => {
+      calls.push("me")
+      return { success: true, user: { _id: "user-popup" } }
+    },
+    loginWithFirebaseUser: async () => { calls.push("login") },
+  })
+
+  const result = await restore.establish({ uid: "firebase-popup" })
+  assert.deepEqual(calls, ["login", "me"])
+  assert.equal(result.user._id, "user-popup")
 })
 
 test("does not turn backend outages into logout or trigger Firebase login", async () => {

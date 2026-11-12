@@ -11,6 +11,8 @@ export const restoreBackendSession = createSessionRestorer({
     loginWithFirebaseUser: createFirebaseBackendLogin(api),
 })
 
+export const establishBackendSession = restoreBackendSession.establish
+
 export const spendCoins = async (data)=>{
     const response = await api.post("/api/auth/use-coins" , data)
     return response.data

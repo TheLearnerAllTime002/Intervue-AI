@@ -8,29 +8,45 @@ export const createFirebaseBackendLogin = (api) => async (firebaseUser) => {
 export const createSessionRestorer = ({ getCurrentUser, loginWithFirebaseUser }) => {
   const inFlightByUid = new Map()
 
-  return (firebaseUser) => {
-    const key = firebaseUser?.uid || "anonymous"
+  const runOncePerUser = (firebaseUser, action) => {
+    const key = firebaseUser.uid
     const existing = inFlightByUid.get(key)
     if (existing) return existing
 
-    const restoration = (async () => {
+    const operation = action()
+    inFlightByUid.set(key, operation)
+    operation.finally(() => {
+      if (inFlightByUid.get(key) === operation) inFlightByUid.delete(key)
+    }).catch(() => {})
+    return operation
+  }
+
+  const restore = (firebaseUser) => {
+    // An anonymous page load has no app identity to restore. Avoid probing the
+    // protected endpoint and generating an expected 401 in the browser console.
+    if (!firebaseUser?.uid) return Promise.resolve(null)
+
+    return runOncePerUser(firebaseUser, async () => {
       try {
         return await getCurrentUser()
       } catch (error) {
         if (!isUnauthorized(error)) throw error
-        if (!firebaseUser) return null
       }
 
       await loginWithFirebaseUser(firebaseUser)
       // Confirm the cookie made it through the Auth service, Gateway and Vercel
       // rewrite before React considers this user signed in.
       return getCurrentUser()
-    })()
-
-    inFlightByUid.set(key, restoration)
-    restoration.finally(() => {
-      if (inFlightByUid.get(key) === restoration) inFlightByUid.delete(key)
-    }).catch(() => {})
-    return restoration
+    })
   }
+
+  restore.establish = (firebaseUser) => {
+    if (!firebaseUser?.uid) return Promise.resolve(null)
+    return runOncePerUser(firebaseUser, async () => {
+      await loginWithFirebaseUser(firebaseUser)
+      return getCurrentUser()
+    })
+  }
+
+  return restore
 }
