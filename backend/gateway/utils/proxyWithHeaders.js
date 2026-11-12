@@ -1,5 +1,6 @@
 import proxy from "express-http-proxy"
 import { proxyErrorHandler } from "./proxyErrorHandler.js"
+import { getSessionId } from "../../shared/sessionConfig.js"
 
 
 
@@ -16,8 +17,9 @@ export const proxyWithHeaders =(serviceUrl)=>{
             if(srcReq.user){
                 proxyReqOpts.headers["x-user-id"]=srcReq.user.userId
             }
-            if(srcReq.cookies?.session){
-                proxyReqOpts.headers["x-session-id"] = srcReq.cookies.session
+            const sessionId = getSessionId(srcReq.cookies)
+            if(sessionId){
+                proxyReqOpts.headers["x-session-id"] = sessionId
             }
             if (process.env.INTERNAL_SERVICE_SECRET) proxyReqOpts.headers["x-gateway-secret"] = process.env.INTERNAL_SERVICE_SECRET
             return proxyReqOpts

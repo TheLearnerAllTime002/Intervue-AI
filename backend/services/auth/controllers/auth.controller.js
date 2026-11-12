@@ -2,7 +2,7 @@ import { getAuth } from "firebase-admin/auth";
 import { app } from "../configs/firebase.js";
 import User from "../model/user.model.js";
 import { getRedisClient } from "../../../shared/redis/redis.js";
-import { SESSION_TTL_SECONDS } from "../../../shared/sessionConfig.js";
+import { getSessionId, SESSION_TTL_SECONDS } from "../../../shared/sessionConfig.js";
 import { createLoginHandler, createLogoutHandler, isDependencyUnavailable } from "./loginHandler.js";
 
 const redis = getRedisClient("auth");
@@ -24,7 +24,7 @@ export const login = createLoginHandler({
 export const logout = createLogoutHandler({ redis });
 export const useInterviewCoins = async (req, res) => {
   try {
-    const sessionId = req.cookies?.session;
+    const sessionId = getSessionId(req.cookies);
 
     if (!sessionId) {
       return res.status(401).json({ success: false, message: "Please sign in again" });
@@ -75,7 +75,7 @@ export const useInterviewCoins = async (req, res) => {
 
 export const getCoinHistory = async (req, res) => {
   try {
-    const sessionId = req.cookies?.session;
+    const sessionId = getSessionId(req.cookies);
     if (!sessionId) return res.status(401).json({ success: false, message: "Please sign in again." });
 
     const sessionRaw = await redis.get(`session:${sessionId}`);

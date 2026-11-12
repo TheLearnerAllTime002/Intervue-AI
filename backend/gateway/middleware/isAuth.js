@@ -1,12 +1,13 @@
 import { authLog } from "../../shared/diagnostics.js";
 import { getRedisClient } from "../../shared/redis/redis.js";
+import { getSessionId } from "../../shared/sessionConfig.js";
 
 const redis = {
     get: (...args) => getRedisClient("gateway").get(...args),
 };
 
 export const createIsAuth = ({ sessionStore, logger = console.info }) => async (req, res, next) => {
-    const sessionId = req.cookies?.session;
+    const sessionId = getSessionId(req.cookies);
     const requestId = req.requestId || "unknown";
     authLog("GATEWAY_COOKIE_RECEIVED", {
         requestId,

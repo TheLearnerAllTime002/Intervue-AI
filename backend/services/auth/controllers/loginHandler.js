@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { authLog } from "../../../shared/diagnostics.js";
-import { getSessionCookieOptions, SESSION_TTL_SECONDS } from "../../../shared/sessionConfig.js";
+import { getSessionCookieOptions, LEGACY_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME, getSessionId, SESSION_TTL_SECONDS } from "../../../shared/sessionConfig.js";
 
 const isInvalidFirebaseToken = (error) => [
     "auth/id-token-expired",
@@ -64,7 +64,11 @@ export const createLoginHandler = ({ verifyIdToken, User, redis, logger = consol
         await redis.set(`session:${sessionId}`, JSON.stringify(session), "EX", SESSION_TTL_SECONDS);
         log("REDIS_SESSION_WRITE_SUCCESS", { namespace: "session:", ttlSeconds: SESSION_TTL_SECONDS });
 
-        res.cookie("session", sessionId, getSessionCookieOptions(req));
+        const cookieOptions = getSessionCookieOptions(req);
+        res.cookie(SESSION_COOKIE_NAME, sessionId, cookieOptions);
+        // Remove the old cookie where possible. The Gateway still accepts it
+        // for cached clients, but always prefers the versioned cookie.
+        res.clearCookie(LEGACY_SESSION_COOKIE_NAME, cookieOptions);
         log("AUTH_COOKIE_ISSUED", { httpOnly: true, secure: getSessionCookieOptions(req).secure, sameSite: "lax" });
         return res.json({ success: true, user });
     } catch (error) {
@@ -93,10 +97,12 @@ export const createLoginHandler = ({ verifyIdToken, User, redis, logger = consol
 };
 
 export const createLogoutHandler = ({ redis, logger = console.info }) => async (req, res) => {
-    const sessionId = req.cookies?.session;
+    const sessionId = getSessionId(req.cookies);
     try {
         if (sessionId) await redis.del(`session:${sessionId}`);
-        res.clearCookie("session", getSessionCookieOptions(req));
+        const cookieOptions = getSessionCookieOptions(req);
+        res.clearCookie(SESSION_COOKIE_NAME, cookieOptions);
+        res.clearCookie(LEGACY_SESSION_COOKIE_NAME, cookieOptions);
         return res.json({ success: true, message: "Logged out successfully" });
     } catch (error) {
         authLog("AUTH_LOGOUT_FAILURE", {

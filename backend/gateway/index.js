@@ -15,6 +15,7 @@ import { proxyErrorHandler } from "./utils/proxyErrorHandler.js"
 import { sendContactMessage } from "./controllers/contact.controller.js"
 import { authLog, ensureRequestId } from "../shared/diagnostics.js"
 import { getRedisClient } from "../shared/redis/redis.js"
+import { getSessionId, LEGACY_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from "../shared/sessionConfig.js"
 const app = express()
 getRedisClient("gateway")
 
@@ -54,7 +55,7 @@ app.use("/api/auth", (req, _res, next) => {
         requestId: req.requestId,
         service: "gateway",
         endpoint: req.path,
-        cookiePresent: Boolean(req.cookies?.session),
+        cookiePresent: Boolean(getSessionId(req.cookies)),
     })
     next()
 })
@@ -76,8 +77,9 @@ app.use("/api/auth" , proxy(authServiceUrl, {
         if (process.env.INTERNAL_SERVICE_SECRET) {
             proxyReqOpts.headers["x-gateway-secret"] = process.env.INTERNAL_SERVICE_SECRET
         }
-        if (srcReq.cookies?.session) {
-            proxyReqOpts.headers["cookie"] = `session=${srcReq.cookies.session}`
+        const sessionId = getSessionId(srcReq.cookies)
+        if (sessionId) {
+            proxyReqOpts.headers["cookie"] = `${SESSION_COOKIE_NAME}=${sessionId}; ${LEGACY_SESSION_COOKIE_NAME}=${sessionId}`
         }
         return proxyReqOpts
     },
