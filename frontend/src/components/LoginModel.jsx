@@ -5,13 +5,11 @@ import { FcGoogle } from "react-icons/fc";
 import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
 import { establishBackendSession } from '../apis/user.api';
-import { useNavigate } from 'react-router-dom';
 
 function LoginModel({ onClose, setUser }) {
     const [isSigningIn, setIsSigningIn] = useState(false)
     const [errorMessage, setErrorMessage] = useState('')
     const signingInRef = useRef(false)
-    const navigate = useNavigate()
 
     const handleGoogleAuth = async () => {
         if (signingInRef.current) return
@@ -25,9 +23,12 @@ function LoginModel({ onClose, setUser }) {
             const result = await signInWithPopup(auth, provider)
             const response = await establishBackendSession(result.user)
 
-            setUser(response?.user)
+            const backendUser = response?.user ?? response?.data?.user
+            if (!backendUser?.userId && !backendUser?._id) {
+                throw new Error('The backend did not return an authenticated user.')
+            }
+            setUser(backendUser)
             onClose()
-            navigate('/dashboard', { replace: true })
         } catch (error) {
             if (error.code === 'auth/popup-blocked') {
                 setErrorMessage('Popup blocked. Redirecting to Google sign-in...')
