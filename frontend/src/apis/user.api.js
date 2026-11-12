@@ -1,13 +1,15 @@
 import api from "../utils/axios"
+import { createFirebaseBackendLogin, createSessionRestorer } from "./sessionRestore"
 
 export const getCurrentUser = async () => {
-    try {
-        const response = await api.get("/api/me")
-        return response.data
-    } catch {
-        return null
-    }
+    const response = await api.get("/api/me")
+    return response.data
 }
+
+export const restoreBackendSession = createSessionRestorer({
+    getCurrentUser,
+    loginWithFirebaseUser: createFirebaseBackendLogin(api),
+})
 
 export const spendCoins = async (data)=>{
     const response = await api.post("/api/auth/use-coins" , data)

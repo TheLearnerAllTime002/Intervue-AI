@@ -1,9 +1,7 @@
 import { Routes , Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
-import { useState } from 'react'
-import { useEffect } from 'react'
-import { getCurrentUser } from './apis/user.api'
+import { useCallback, useEffect, useState } from 'react'
 import Scorer from './pages/Scorer'
 import { getResume } from './apis/resume.api'
 import { useDispatch } from 'react-redux'
@@ -18,44 +16,83 @@ import Applications from './pages/Applications'
 import Contact from './pages/Contact'
 import QuestionBanks from './pages/QuestionBanks'
 import CoverLetter from './pages/CoverLetter'
-import { getRedirectResult } from 'firebase/auth'
+import { getRedirectResult, onAuthStateChanged } from 'firebase/auth'
 import { auth } from './utils/firebase'
-import api from './utils/axios'
+import { restoreBackendSession } from './apis/user.api'
 
 function App() {
   const [user,setUser]= useState(null)
   const [loading , setLoading] = useState(true)
+  const [authError, setAuthError] = useState(null)
+  const [retryingSession, setRetryingSession] = useState(false)
   const dispatch = useDispatch()
 
+  useEffect(() => {
+    let active = true
+    let authStateReady = false
+    let redirectResultReady = false
+    let restoreStarted = false
+    let firebaseUser = null
+    let unsubscribe = () => {}
 
-  useEffect(()=>{
-
-    const getUser = async () => {
+    const restore = async () => {
+      if (!active || restoreStarted || !authStateReady || !redirectResultReady) return
+      restoreStarted = true
+      unsubscribe()
       try {
-        const redirectResult = await getRedirectResult(auth)
-        if (redirectResult?.user) {
-          const token = await redirectResult.user.getIdToken()
-          const response = await api.post("/api/auth/login", { token })
-          setUser(response?.data?.user)
-        } else if (auth.currentUser) {
-          const data = await getCurrentUser()
-          setUser(data?.user)
-        } else {
-          setUser(null)
+        const result = await restoreBackendSession(firebaseUser)
+        if (active) {
+          setUser(result?.user ?? null)
+          setAuthError(null)
         }
       } catch (error) {
-        if (!['auth/no-auth-event', 'auth/missing-initial-state'].includes(error.code)) {
-          console.error("Could not complete Google sign-in:", error)
-        }
-        setUser(null)
+        console.error("Could not restore the backend session:", error.response?.status || error.code || "network error")
+        if (active) setAuthError(error)
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
 
-    getUser()
+    unsubscribe = onAuthStateChanged(auth, (userFromFirebase) => {
+      firebaseUser = userFromFirebase
+      authStateReady = true
+      void restore()
+    }, (error) => {
+      console.error("Firebase auth state initialization failed:", error.code || "unknown")
+      authStateReady = true
+      void restore()
+    })
 
-  },[])
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) firebaseUser = result.user
+    }).catch((error) => {
+      if (!['auth/no-auth-event', 'auth/missing-initial-state'].includes(error.code)) {
+        console.error("Could not read Google redirect result:", error.code || "unknown")
+      }
+    }).finally(() => {
+      redirectResultReady = true
+      void restore()
+    })
+
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [])
+
+  const retrySessionRestore = useCallback(async () => {
+    setRetryingSession(true)
+    setAuthError(null)
+    try {
+      const result = await restoreBackendSession(auth.currentUser)
+      setUser(result?.user ?? null)
+    } catch (error) {
+      console.error("Could not restore the backend session:", error.response?.status || error.code || "network error")
+      setAuthError(error)
+    } finally {
+      setRetryingSession(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (loading || !user) {
@@ -79,6 +116,20 @@ function App() {
       <div className="fixed top-0 left-0 w-full z-[9999]">
         <div className="h-1 bg-black animate-pulse w-full" />
       </div>
+    )
+  }
+
+  if (authError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-sky-50 px-6 text-center">
+        <section className="max-w-md border-2 border-black bg-white p-8 shadow-[6px_6px_0_#171717]">
+          <h1 className="text-2xl font-black">We couldn’t verify your session</h1>
+          <p className="mt-3 text-sm leading-6">Your sign-in state is still available. Check your connection and try again.</p>
+          <button type="button" onClick={retrySessionRestore} disabled={retryingSession} className="mt-6 border-2 border-black bg-yellow-300 px-5 py-3 font-bold disabled:opacity-60">
+            {retryingSession ? "Checking session..." : "Retry"}
+          </button>
+        </section>
+      </main>
     )
   }
 

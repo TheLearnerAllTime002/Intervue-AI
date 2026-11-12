@@ -1,7 +1,10 @@
 import crypto from "crypto";
 import razorpay from "../configs/razorpay.js";
 import Billing from "../models/billing.model.js";
-import redis from "../../../shared/redis/redis.js";
+import { getRedisClient } from "../../../shared/redis/redis.js";
+import { SESSION_TTL_SECONDS } from "../../../shared/sessionConfig.js";
+
+const redis = getRedisClient("billing");
 
 const PLANS = {
   starter: {
@@ -141,7 +144,7 @@ export const verifyPayment = async (req, res) => {
     const newCoinBalance = (Number(sessionData.interviewCoin) || 0) + payment.interviewCoins;
     sessionData.interviewCoin = newCoinBalance;
 
-    await redis.set(`session:${sessionId}`, JSON.stringify(sessionData), "EX", 60 * 60 * 24 * 7);
+    await redis.set(`session:${sessionId}`, JSON.stringify(sessionData), "EX", SESSION_TTL_SECONDS);
 
     return res.status(200).json({
       success: true,

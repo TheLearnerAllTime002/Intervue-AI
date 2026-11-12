@@ -1,32 +1,66 @@
-import redis from "../../shared/redis/redis.js"
+import { authLog } from "../../shared/diagnostics.js";
+import { getRedisClient } from "../../shared/redis/redis.js";
 
+const redis = {
+    get: (...args) => getRedisClient("gateway").get(...args),
+};
 
+export const createIsAuth = ({ sessionStore, logger = console.info }) => async (req, res, next) => {
+    const sessionId = req.cookies?.session;
+    const requestId = req.requestId || "unknown";
+    authLog("GATEWAY_COOKIE_RECEIVED", {
+        requestId,
+        service: "gateway",
+        endpoint: req.path || req.url?.split("?")[0],
+        cookiePresent: Boolean(sessionId),
+    }, logger);
 
-export const isAuth = async (req,res,next) => {
-    try {
-        const sessionId = req.cookies?.session
-
-        if(!sessionId){
-            return res.status(401).json({message:"Unauthorized"})
-        }
-
-        const session =await redis.get(`session:${sessionId}`)
-
-        if(!session){
-            return res.status(401).json({message:"Session Expired"})
-        }
-
-        req.user = JSON.parse(session);
-        // Guard against corrupted sessions where userId was serialised as an object
-        if (!req.user?.userId || typeof req.user.userId !== "string") {
-            await redis.del(`session:${sessionId}`)
-            return res.status(401).json({ message: "Session invalid. Please sign in again." })
-        }
-
-        next();
-
-    } catch (error) {
-         console.error("Could not validate the user session:", error?.message);
-         return res.status(503).json({ message: "Session service is temporarily unavailable. Please try again shortly." });
+    if (!sessionId) {
+        authLog("GATEWAY_SESSION_REJECTED", { requestId, service: "gateway", reason: "missing_cookie", status: 401 }, logger);
+        return res.status(401).json({ message: "Unauthorized" });
     }
-}
+
+    let rawSession;
+    try {
+        rawSession = await sessionStore.get(`session:${sessionId}`);
+        authLog("GATEWAY_SESSION_LOOKUP", {
+            requestId,
+            service: "gateway",
+            namespace: "session:",
+            outcome: rawSession ? "hit" : "miss",
+        }, logger);
+    } catch (error) {
+        authLog("GATEWAY_SESSION_LOOKUP", {
+            requestId,
+            service: "gateway",
+            namespace: "session:",
+            outcome: "error",
+            code: error?.code || "unknown",
+        }, logger);
+        return res.status(503).json({ message: "Session service is temporarily unavailable. Please try again shortly." });
+    }
+
+    if (!rawSession) {
+        authLog("GATEWAY_SESSION_REJECTED", { requestId, service: "gateway", reason: "session_missing_or_expired", status: 401 }, logger);
+        return res.status(401).json({ message: "Session Expired" });
+    }
+
+    let user;
+    try {
+        user = JSON.parse(rawSession);
+    } catch {
+        authLog("GATEWAY_SESSION_REJECTED", { requestId, service: "gateway", reason: "invalid_session_json", status: 401 }, logger);
+        return res.status(401).json({ message: "Session invalid. Please sign in again." });
+    }
+
+    if (!user?.userId || typeof user.userId !== "string") {
+        authLog("GATEWAY_SESSION_REJECTED", { requestId, service: "gateway", reason: "invalid_user_identity", status: 401 }, logger);
+        return res.status(401).json({ message: "Session invalid. Please sign in again." });
+    }
+
+    req.user = user;
+    authLog("GATEWAY_SESSION_VALIDATED", { requestId, service: "gateway", status: 200 }, logger);
+    return next();
+};
+
+export const isAuth = createIsAuth({ sessionStore: redis });

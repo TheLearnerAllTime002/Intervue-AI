@@ -41,3 +41,33 @@ now wait for MongoDB before opening their HTTP port.
 The MongoDB data is stored in the `mongodb_data` Docker volume. The database
 port is bound to loopback for local development and has no MongoDB credentials
 configured; do not expose it to a public network.
+
+## Production authentication configuration
+
+Configure these values independently in the Render environment for each service:
+
+- **Gateway:** `FRONTEND_URL`, `AUTH_SERVICE_URL`, `RESUME_SERVICE_URL`,
+  `INTERVIEW_SERVICE_URL`, `ROADMAP_SERVICE_URL`, `BILLING_SERVICE_URL`,
+  `REDIS_URL`, and `INTERNAL_SERVICE_SECRET`.
+- **Auth:** `MONGODB_URL`, `REDIS_URL`, `INTERNAL_SERVICE_SECRET`, and either
+  `FIREBASE_SERVICE_ACCOUNT_JSON` or `FIREBASE_PROJECT_ID`,
+  `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`.
+- **Billing:** `AUTH_MONGODB_URL`, `REDIS_URL`, and `INTERNAL_SERVICE_SECRET`.
+- **Resume, Interview, Roadmap:** each requires `INTERNAL_SERVICE_SECRET`; set
+  its other service-specific database and API keys as documented by its
+  `.env.example`.
+
+Gateway, Auth, Billing, and all protected services must use the same
+`INTERNAL_SERVICE_SECRET`. Gateway, Auth, and Billing must use the same
+`REDIS_URL`, including credentials, TLS scheme, host, port, and database index:
+Auth writes session keys, Gateway validates them, and Billing updates balances
+inside those same session records. The services log a one-way endpoint
+fingerprint (never the URL or password) on Redis connection so Render logs can
+confirm whether these three deployments resolve to the same Redis endpoint.
+
+For Vercel, the checked-in build log shows the repository root is the project
+root (`npm ci --prefix frontend`), so root `vercel.json` is active. Set
+`VITE_FIREBASE_API_KEY` in the Vercel Production environment to the web API key
+for Firebase project `intervue-ai-003`. The frontend API uses same-origin `/api`
+requests through the Vercel rewrite. The `frontend/vercel.json` config is for a
+Vercel project whose Root Directory is explicitly set to `frontend`.

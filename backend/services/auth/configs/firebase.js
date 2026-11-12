@@ -45,6 +45,13 @@ const readServiceAccount = () => {
   );
 };
 
+const serviceAccount = readServiceAccount();
+const frontendFirebaseProjectId = "intervue-ai-003";
+if (serviceAccount.project_id && serviceAccount.project_id !== frontendFirebaseProjectId) {
+  throw new Error(`Firebase Admin project must match the frontend Firebase project (${frontendFirebaseProjectId}).`);
+}
+
 export const app = initializeApp({
-  credential: cert(readServiceAccount()),
+  credential: cert(serviceAccount),
+  projectId: frontendFirebaseProjectId,
 });

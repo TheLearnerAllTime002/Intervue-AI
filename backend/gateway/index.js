@@ -13,7 +13,10 @@ import { isAuth } from "./middleware/isAuth.js"
 import { proxyWithHeaders } from "./utils/proxyWithHeaders.js"
 import { proxyErrorHandler } from "./utils/proxyErrorHandler.js"
 import { sendContactMessage } from "./controllers/contact.controller.js"
+import { authLog, ensureRequestId } from "../shared/diagnostics.js"
+import { getRedisClient } from "../shared/redis/redis.js"
 const app = express()
+getRedisClient("gateway")
 
 const getServiceUrl = (name) => {
     const value = process.env[name]?.trim().replace(/^["']|["']$/g, "").replace(/\/+$/, "")
@@ -33,13 +36,28 @@ const interviewServiceUrl = getServiceUrl("INTERVIEW_SERVICE_URL")
 const roadmapServiceUrl = getServiceUrl("ROADMAP_SERVICE_URL")
 const billingServiceUrl = getServiceUrl("BILLING_SERVICE_URL")
 
+app.use(ensureRequestId)
 app.use(cors({
     origin: frontendOrigin,
     credentials:true
 }))
 
-app.use(morgan("dev"))
+app.use(morgan((tokens, req, res) => [
+    tokens.method(req, res),
+    req.path,
+    tokens.status(req, res),
+    `${tokens["response-time"](req, res)} ms`,
+].join(" ")))
 app.use(cookieParser())
+app.use("/api/auth", (req, _res, next) => {
+    authLog("GATEWAY_COOKIE_RECEIVED", {
+        requestId: req.requestId,
+        service: "gateway",
+        endpoint: req.path,
+        cookiePresent: Boolean(req.cookies?.session),
+    })
+    next()
+})
 
 const PORT = process.env.PORT || 8000
 
@@ -54,11 +72,33 @@ app.use("/api/auth" , proxy(authServiceUrl, {
     parseReqBody: false,
     proxyErrorHandler,
     proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+        proxyReqOpts.headers["x-request-id"] = srcReq.requestId || "unknown"
+        if (process.env.INTERNAL_SERVICE_SECRET) {
+            proxyReqOpts.headers["x-gateway-secret"] = process.env.INTERNAL_SERVICE_SECRET
+        }
         if (srcReq.cookies?.session) {
             proxyReqOpts.headers["cookie"] = `session=${srcReq.cookies.session}`
         }
         return proxyReqOpts
-    }
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq) => {
+        if (proxyRes.statusCode === 401) {
+            let message;
+            try {
+                message = JSON.parse(proxyResData.toString("utf8"))?.message;
+            } catch {
+                message = undefined;
+            }
+            authLog("DOWNSTREAM_AUTH_FAILURE", {
+                requestId: userReq.requestId || "unknown",
+                service: "auth",
+                endpoint: userReq.path || userReq.url?.split("?")[0],
+                status: proxyRes.statusCode,
+                message: typeof message === "string" ? message.slice(0, 200) : undefined,
+            }, console.warn)
+        }
+        return proxyResData
+    },
 }))
 app.use("/api/resume" ,isAuth, proxyWithHeaders(resumeServiceUrl))
 app.use("/api/interview",isAuth ,proxyWithHeaders(interviewServiceUrl))

@@ -1,4 +1,6 @@
-import redis from "../../../shared/redis/redis.js";
+import { getRedisClient } from "../../../shared/redis/redis.js";
+
+const redis = getRedisClient("roadmap");
 import graph from "../graph/roadmap.graph.js";
 import Roadmap from "../models/roadmap.model.js";
 import mongoose from "mongoose";

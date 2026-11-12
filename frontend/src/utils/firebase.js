@@ -1,9 +1,14 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
+const firebaseApiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+if (!firebaseApiKey) {
+  throw new Error("VITE_FIREBASE_API_KEY is required to initialize Firebase Authentication.");
+}
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  apiKey: firebaseApiKey,
   authDomain: "intervue-ai-003.firebaseapp.com",
   projectId: "intervue-ai-003",
   storageBucket: "intervue-ai-003.firebasestorage.app",
@@ -12,7 +17,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 const auth = getAuth(app)
 

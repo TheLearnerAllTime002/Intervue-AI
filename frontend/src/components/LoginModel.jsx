@@ -4,7 +4,7 @@ import { motion } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
 import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
-import api from '../utils/axios';
+import { restoreBackendSession } from '../apis/user.api';
 import { useNavigate } from 'react-router-dom';
 
 function LoginModel({ onClose, setUser }) {
@@ -23,10 +23,9 @@ function LoginModel({ onClose, setUser }) {
             // Firebase operation first can consume the browser user gesture
             // and cause the popup to be blocked.
             const result = await signInWithPopup(auth, provider)
-            const token = await result.user.getIdToken()
-            const response = await api.post("/api/auth/login", { token })
+            const response = await restoreBackendSession(result.user)
 
-            setUser(response?.data?.user)
+            setUser(response?.user)
             onClose()
             navigate('/dashboard', { replace: true })
         } catch (error) {

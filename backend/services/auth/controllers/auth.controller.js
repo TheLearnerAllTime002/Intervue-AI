@@ -1,11 +1,11 @@
-import crypto from "crypto";
-
 import { getAuth } from "firebase-admin/auth";
-
-
 import { app } from "../configs/firebase.js";
 import User from "../model/user.model.js";
-import  redis from "../../../shared/redis/redis.js";
+import { getRedisClient } from "../../../shared/redis/redis.js";
+import { SESSION_TTL_SECONDS } from "../../../shared/sessionConfig.js";
+import { createLoginHandler, createLogoutHandler, isDependencyUnavailable } from "./loginHandler.js";
+
+const redis = getRedisClient("auth");
 
 const COIN_ACTIONS = {
   "resume-scorer": { coins: 10 },
@@ -15,141 +15,13 @@ const COIN_ACTIONS = {
   "cover-letter": { coins: 20 },
 };
 
-const getSessionCookieOptions = (req) => {
-  const forwardedProtocol = req.get("x-forwarded-proto")?.split(",")[0]?.trim();
-  const isHttps =
-    process.env.NODE_ENV === "production" ||
-    forwardedProtocol === "https" ||
-    req.protocol === "https";
+export const login = createLoginHandler({
+  verifyIdToken: (token) => getAuth(app).verifyIdToken(token),
+  User,
+  redis,
+});
 
-  return {
-    httpOnly: true,
-    secure: isHttps,
-    sameSite: isHttps ? "none" : "lax",
-    path: "/",
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  };
-};
-
-
-export const login = async (req, res) => {
-
-  try {
-
-    const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
-
-    if (!token) {
-      return res.status(400).json({ message: "Firebase token is required" });
-    }
-
-    const decoded = await getAuth(app).verifyIdToken(token);
-    if (!decoded.uid || !decoded.email || decoded.email_verified !== true) {
-      return res.status(401).json({ message: "The Firebase token has no usable user identity." });
-    }
-
-    // Prefer the stable Firebase UID. Only link a legacy/email-matched record
-    // after Firebase has verified the address above.
-    let user = await User.findOne({ firebaseUid: decoded.uid });
-    if (!user) user = await User.findOne({ email: decoded.email });
-
-    if (!user) {
-
-      user = await User.create({
-
-        firebaseUid: decoded.uid,
-
-        email: decoded.email,
-
-        name: decoded.name || decoded.email.split("@")[0]
-
-      });
-    } else if (user.firebaseUid !== decoded.uid) {
-      // The email was verified by Firebase. Re-linking the existing record
-      // prevents duplicate-key failures after an account/provider migration.
-      user.firebaseUid = decoded.uid;
-      user.name = decoded.name || user.name || decoded.email.split("@")[0];
-      await user.save();
-    }
-
-    const sessionId =crypto.randomUUID();
-    const userId = String(user._id);
-
-    await redis.set(`session:${sessionId}`, JSON.stringify({
-        userId,
-
-        name:
-        user.name,
-
-        email:
-        user.email,
-
-        interviewCoin:
-        user.interviewCoin
-
-      }),"EX", 60 * 60 * 24 * 7);
-
-    res.cookie("session", sessionId, getSessionCookieOptions(req));
-
-    return res.json({ success:true,user});
-
-  } catch (error) {
-    if (error?.code === 11000) {
-      console.error("Could not save authenticated user:", error.message);
-      return res.status(409).json({
-        message: "Your account could not be linked because the email is already in use.",
-      });
-    }
-
-    const providerUnavailable =
-      /\b(EACCES|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|MongooseServerSelectionError|MongoServerSelectionError)\b/i.test(
-        `${error?.message || ""} ${error?.cause?.code || ""}`
-      ) || ["MongooseServerSelectionError", "MongoServerSelectionError"].includes(error?.name);
-    const firebaseTokenError = [
-      "auth/id-token-expired",
-      "auth/id-token-revoked",
-      "auth/invalid-id-token",
-      "auth/argument-error",
-    ].includes(error?.code);
-
-    console.error("Google sign-in failed:", error?.code || "unknown", error?.message);
-    return res.status(providerUnavailable ? 503 : firebaseTokenError ? 401 : 500).json({
-      message: providerUnavailable
-        ? "Sign-in verification is temporarily unavailable. Please try again shortly."
-        : firebaseTokenError
-          ? "Unable to verify the sign-in token. Please sign in again."
-          : "Could not complete sign-in. Please try again.",
-    });
-
-  }
-
-};
-
-export const logout = async (req, res) => {
-  try {
-
-    const sessionId = req.cookies?.session;
-
-    const cookieOptions = getSessionCookieOptions(req);
-    res.clearCookie("session", cookieOptions);
-
-    if (sessionId) {
-      await redis.del(`session:${sessionId}`);
-    }
-
-    return res.json({
-      success: true,
-      message: "Logged out successfully",
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-
-  }
-};
+export const logout = createLogoutHandler({ redis });
 export const useInterviewCoins = async (req, res) => {
   try {
     const sessionId = req.cookies?.session;
@@ -184,7 +56,7 @@ export const useInterviewCoins = async (req, res) => {
     sessionData.interviewCoin = newBalance;
     const historyEntry = { kind: "usage", action, coins: coinAction.coins, createdAt: new Date().toISOString() };
     sessionData.coinHistory = [...(sessionData.coinHistory || []).slice(-99), historyEntry];
-    await redis.set(`session:${sessionId}`, JSON.stringify(sessionData), "EX", 60 * 60 * 24 * 7);
+    await redis.set(`session:${sessionId}`, JSON.stringify(sessionData), "EX", SESSION_TTL_SECONDS);
 
     return res.status(200).json({
       success: true,
@@ -193,8 +65,11 @@ export const useInterviewCoins = async (req, res) => {
       interviewCoin: newBalance,
     });
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ success: false, message: error.message });
+    console.error(JSON.stringify({ event: "AUTH_COIN_UPDATE_FAILURE", requestId: req.requestId || "unknown", code: error?.code || error?.name || "unknown" }));
+    return res.status(isDependencyUnavailable(error) ? 503 : 500).json({
+      success: false,
+      message: isDependencyUnavailable(error) ? "Session service is temporarily unavailable. Please try again shortly." : "Could not update interview coins.",
+    });
   }
 };
 
@@ -213,7 +88,10 @@ export const getCoinHistory = async (req, res) => {
       transactions: sessionData.coinHistory ?? [],
     });
   } catch (error) {
-    console.error("Could not load coin history:", error.message);
-    return res.status(500).json({ success: false, message: "Could not load coin history." });
+    console.error(JSON.stringify({ event: "AUTH_COIN_HISTORY_FAILURE", requestId: req.requestId || "unknown", code: error?.code || error?.name || "unknown" }));
+    return res.status(isDependencyUnavailable(error) ? 503 : 500).json({
+      success: false,
+      message: isDependencyUnavailable(error) ? "Session service is temporarily unavailable. Please try again shortly." : "Could not load coin history.",
+    });
   }
 };

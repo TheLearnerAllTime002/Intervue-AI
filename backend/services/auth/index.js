@@ -3,11 +3,15 @@ import "dotenv/config";
 import cookieParser from "cookie-parser";
 import { connectDb } from "./configs/db.js";
 import authRouter from "./routes/auth.route.js";
+import { ensureRequestId } from "../../shared/diagnostics.js";
+import { requireGateway } from "../../shared/serviceAuth.js";
 
 
 const app = express();
 
+app.use(ensureRequestId);
 app.use(express.json());
+app.use(requireGateway);
 
 app.use(cookieParser());
 
@@ -32,7 +36,7 @@ const start = async () => {
       console.log(`Auth Service Started on ${PORT}`);
     });
   } catch (error) {
-    console.error("Auth service could not connect to MongoDB:", error);
+    console.error("Auth service could not connect to MongoDB:", error?.name || error?.code || "unknown error");
     process.exit(1);
   }
 };

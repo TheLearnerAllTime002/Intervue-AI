@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
-import redis from "../../../shared/redis/redis.js";
+import { getRedisClient } from "../../../shared/redis/redis.js";
+
+const redis = getRedisClient("interview");
 import graph from "../graph/graph.js";
 import Interview from "../models/interview.model.js";
 

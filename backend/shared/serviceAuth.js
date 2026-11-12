@@ -1,5 +1,9 @@
 import crypto from "node:crypto";
 
+if (process.env.NODE_ENV === "production" && !process.env.INTERNAL_SERVICE_SECRET) {
+    throw new Error("INTERNAL_SERVICE_SECRET is required in production");
+}
+
 export const requireGateway = (req, res, next) => {
     const expected = process.env.INTERNAL_SERVICE_SECRET;
     if (!expected && process.env.NODE_ENV === "production") {
