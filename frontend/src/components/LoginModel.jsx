@@ -5,10 +5,12 @@ import { FcGoogle } from "react-icons/fc";
 import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
 import api from '../utils/axios';
+import { useNavigate } from 'react-router-dom';
 
 function LoginModel({ onClose, setUser }) {
     const [isSigningIn, setIsSigningIn] = useState(false)
     const [errorMessage, setErrorMessage] = useState('')
+    const navigate = useNavigate()
 
     const loginWithRetry = async (token) => {
         let lastError
@@ -41,6 +43,7 @@ function LoginModel({ onClose, setUser }) {
 
             setUser(response?.data?.user)
             onClose()
+            navigate('/dashboard', { replace: true })
         } catch (error) {
             if (error.code === 'auth/popup-blocked') {
                 setErrorMessage('Popup blocked. Redirecting to Google sign-in...')
