@@ -5,6 +5,14 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
+      "source": "/__/auth/:path*",
+      "destination": "https://intervue-ai-003.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/__/firebase/init.json",
+      "destination": "https://intervue-ai-003.firebaseapp.com/__/firebase/init.json"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://gateway-knre.onrender.com/api/:path*"
     },
