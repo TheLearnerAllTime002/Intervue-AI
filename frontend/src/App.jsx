@@ -16,7 +16,7 @@ import Applications from './pages/Applications'
 import Contact from './pages/Contact'
 import QuestionBanks from './pages/QuestionBanks'
 import CoverLetter from './pages/CoverLetter'
-import { getRedirectResult, onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './utils/firebase'
 import { restoreBackendSession } from './apis/user.api'
 
@@ -29,53 +29,42 @@ function App() {
 
   useEffect(() => {
     let active = true
-    let authStateReady = false
-    let redirectResultReady = false
-    let restoreStarted = false
-    let firebaseUser = null
-    let unsubscribe = () => {}
+    let authRevision = 0
 
-    const restore = async () => {
-      if (!active || restoreStarted || !authStateReady || !redirectResultReady) return
-      restoreStarted = true
-      unsubscribe()
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      const revision = ++authRevision
+      if (!firebaseUser) {
+        setUser(null)
+        setAuthError(null)
+        setLoading(false)
+        return
+      }
+
+      // Keep the Firebase observer active after startup so popup and redirect
+      // sign-ins always update the route guard's React user state.
       try {
         const result = await restoreBackendSession(firebaseUser)
-        if (active) {
+        if (active && revision === authRevision) {
           setUser(result?.user ?? null)
           setAuthError(null)
         }
       } catch (error) {
         console.error("Could not restore the backend session:", error.response?.status || error.code || "network error")
-        if (active) setAuthError(error)
+        if (active && revision === authRevision) setAuthError(error)
       } finally {
-        if (active) setLoading(false)
+        if (active && revision === authRevision) setLoading(false)
       }
-    }
-
-    unsubscribe = onAuthStateChanged(auth, (userFromFirebase) => {
-      firebaseUser = userFromFirebase
-      authStateReady = true
-      void restore()
     }, (error) => {
-      console.error("Firebase auth state initialization failed:", error.code || "unknown")
-      authStateReady = true
-      void restore()
-    })
-
-    getRedirectResult(auth).then((result) => {
-      if (result?.user) firebaseUser = result.user
-    }).catch((error) => {
-      if (!['auth/no-auth-event', 'auth/missing-initial-state'].includes(error.code)) {
-        console.error("Could not read Google redirect result:", error.code || "unknown")
+      console.error("Firebase auth state listener failed:", error.code || "unknown")
+      if (active) {
+        setAuthError(error)
+        setLoading(false)
       }
-    }).finally(() => {
-      redirectResultReady = true
-      void restore()
     })
 
     return () => {
       active = false
+      authRevision += 1
       unsubscribe()
     }
   }, [])
