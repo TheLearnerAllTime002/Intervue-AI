@@ -24,7 +24,7 @@ export const proxyWithHeaders =(serviceUrl)=>{
 
           },
           userResDecorator: (proxyRes, proxyResData, userReq) => {
-            if (proxyRes.statusCode === 401) {
+            if (proxyRes.statusCode === 401 || proxyRes.statusCode >= 500) {
               let message;
               try {
                 message = JSON.parse(proxyResData.toString("utf8"))?.message;
@@ -32,7 +32,7 @@ export const proxyWithHeaders =(serviceUrl)=>{
                 message = undefined;
               }
               console.warn(JSON.stringify({
-                event: "DOWNSTREAM_AUTH_FAILURE",
+                event: proxyRes.statusCode === 401 ? "DOWNSTREAM_AUTH_FAILURE" : "DOWNSTREAM_SERVICE_FAILURE",
                 requestId: userReq.requestId || "unknown",
                 service: new URL(serviceUrl).hostname,
                 endpoint: userReq.path || userReq.url?.split("?")[0],

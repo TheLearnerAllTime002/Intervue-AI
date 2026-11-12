@@ -116,3 +116,32 @@ test("downstream 401 remains a 401 and carries its response body", async (t) => 
     assert.equal(response.status, 401);
     assert.deepEqual(await response.json(), { message: "Downstream session rejected" });
 });
+
+test("downstream 502 is logged with its source and remains visible to the client", async (t) => {
+    const downstream = express();
+    downstream.get("/private", (_req, res) => res.status(502).json({ message: "Upstream dependency failed" }));
+    const downstreamServer = await listen(downstream);
+    t.after(() => downstreamServer.close());
+
+    const warnings = [];
+    const originalWarn = console.warn;
+    console.warn = (entry) => warnings.push(JSON.parse(entry));
+    t.after(() => { console.warn = originalWarn; });
+
+    const gateway = express();
+    gateway.use(ensureRequestId, cookieParser());
+    gateway.use("/api/private", createIsAuth({
+        sessionStore: { get: async () => JSON.stringify({ userId: "mongo-user-id" }) },
+        logger: () => {},
+    }), proxyWithHeaders(origin(downstreamServer)));
+    const gatewayServer = await listen(gateway);
+    t.after(() => gatewayServer.close());
+
+    const response = await fetch(`${origin(gatewayServer)}/api/private/private`, { headers: { cookie: "session=opaque-session" } });
+    assert.equal(response.status, 502);
+    assert.deepEqual(await response.json(), { message: "Upstream dependency failed" });
+    assert.equal(warnings[0].event, "DOWNSTREAM_SERVICE_FAILURE");
+    assert.equal(warnings[0].service, "127.0.0.1");
+    assert.equal(warnings[0].status, 502);
+    assert.ok(warnings[0].requestId);
+});

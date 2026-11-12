@@ -82,14 +82,14 @@ app.use("/api/auth" , proxy(authServiceUrl, {
         return proxyReqOpts
     },
     userResDecorator: (proxyRes, proxyResData, userReq) => {
-        if (proxyRes.statusCode === 401) {
+        if (proxyRes.statusCode === 401 || proxyRes.statusCode >= 500) {
             let message;
             try {
                 message = JSON.parse(proxyResData.toString("utf8"))?.message;
             } catch {
                 message = undefined;
             }
-            authLog("DOWNSTREAM_AUTH_FAILURE", {
+            authLog(proxyRes.statusCode === 401 ? "DOWNSTREAM_AUTH_FAILURE" : "DOWNSTREAM_SERVICE_FAILURE", {
                 requestId: userReq.requestId || "unknown",
                 service: "auth",
                 endpoint: userReq.path || userReq.url?.split("?")[0],
