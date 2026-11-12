@@ -24,10 +24,10 @@ const getServiceUrl = (name) => {
 
 const frontendOrigin = process.env.FRONTEND_URL?.replace(/\/+$/, "")
 const authServiceUrl = "https://auth-9wnc.onrender.com"
-const resumeServiceUrl = getServiceUrl("RESUME_SERVICE_URL")
-const interviewServiceUrl = getServiceUrl("INTERVIEW_SERVICE_URL")
-const roadmapServiceUrl = getServiceUrl("ROADMAP_SERVICE_URL")
-const billingServiceUrl = getServiceUrl("BILLING_SERVICE_URL")
+const resumeServiceUrl = "https://resume-r5kw.onrender.com"
+const interviewServiceUrl = "https://interview-y5ql.onrender.com"
+const roadmapServiceUrl = "https://roadmap-edxz.onrender.com"
+const billingServiceUrl = "https://billing-ecwc.onrender.com"
 
 app.use(cors({
     origin: frontendOrigin,
