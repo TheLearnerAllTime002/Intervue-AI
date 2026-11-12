@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test src/apis/sessionRestore.test.js",
+    "test": "node --test src/apis/sessionRestore.test.js src/utils/apiResilience.test.js",
     "preview": "vite preview"
   },
   "engines": {
