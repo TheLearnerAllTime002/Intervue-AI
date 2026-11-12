@@ -7,12 +7,13 @@ const createResponse = () => ({
     statusCode: 200,
     body: undefined,
     cookieValue: undefined,
+    clearedCookies: [],
     cookieOptions: undefined,
     clearedCookie: undefined,
     status(code) { this.statusCode = code; return this; },
     json(body) { this.body = body; return this; },
     cookie(name, value, options) { this.cookieValue = { name, value }; this.cookieOptions = options; return this; },
-    clearCookie(name, options) { this.clearedCookie = { name, options }; return this; },
+    clearCookie(name, options) { this.clearedCookies.push({ name, options }); this.clearedCookie = { name, options }; return this; },
 });
 
 const createRequest = (token = "firebase-id-token") => ({
@@ -38,7 +39,8 @@ test("valid token creates one Redis session and issues a secure HTTP-only cookie
     await handler(createRequest(), res);
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.user, user);
-    assert.equal(res.cookieValue.name, "session");
+    assert.equal(res.cookieValue.name, "intervue_session_v2");
+    assert.equal(res.clearedCookies[0].name, "session");
     assert.equal(res.cookieOptions.httpOnly, true);
     assert.equal(res.cookieOptions.secure, true);
     assert.equal(res.cookieOptions.sameSite, "lax");
@@ -64,7 +66,7 @@ test("valid Google login replaces a stale cookie instead of requiring or trustin
 
     await handler({ ...createRequest(), cookies: { session: "stale-session-cookie" } }, res);
     assert.equal(res.statusCode, 200);
-    assert.equal(res.cookieValue.name, "session");
+    assert.equal(res.cookieValue.name, "intervue_session_v2");
     assert.notEqual(res.cookieValue.value, "stale-session-cookie");
     assert.equal(writes.length, 1);
     assert.equal(writes[0][0], `session:${res.cookieValue.value}`);
@@ -127,8 +129,8 @@ test("logout deletes the Redis session before clearing the matching cookie", asy
     const res = createResponse();
     const handler = createLogoutHandler({ redis: { del: async (key) => { order.push(`del:${key}`); } }, logger: () => {} });
     await handler({ ...createRequest(), cookies: { session: "opaque-session" } }, res);
-    order.push(`clear:${res.clearedCookie.name}`);
-    assert.deepEqual(order, ["del:session:opaque-session", "clear:session"]);
+    order.push(`clear:${res.clearedCookies.map(({ name }) => name).join(",")}`);
+    assert.deepEqual(order, ["del:session:opaque-session", "clear:intervue_session_v2,session"]);
     assert.equal(res.statusCode, 200);
     assert.equal(res.clearedCookie.options.httpOnly, true);
     assert.equal(res.clearedCookie.options.secure, true);

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createIsAuth } from "../middleware/isAuth.js";
 import { proxyErrorHandler } from "../utils/proxyErrorHandler.js";
+import { SESSION_COOKIE_NAME } from "../../shared/sessionConfig.js";
 
 const createResponse = () => ({
     statusCode: 200,
@@ -64,6 +65,21 @@ test("validates the session and populates the exact serialized user identity", a
     assert.equal(result.nextCalled, true);
     assert.deepEqual(result.req.user, { userId: "mongo-id", name: "Test" });
     assert.equal(result.logs.some(({ event }) => event === "GATEWAY_SESSION_VALIDATED"), true);
+});
+
+test("prefers a fresh versioned cookie over an old legacy browser cookie", async () => {
+    const logs = [];
+    const calls = [];
+    const middleware = createIsAuth({
+        sessionStore: { get: async (key) => { calls.push(key); return JSON.stringify({ userId: "current-user" }); } },
+        logger: (entry) => logs.push(JSON.parse(entry)),
+    });
+    const req = { cookies: { session: "stale-session", [SESSION_COOKIE_NAME]: "fresh-session" }, requestId: "test-request" };
+    const res = createResponse();
+    let nextCalled = false;
+    await middleware(req, res, () => { nextCalled = true; });
+    assert.equal(nextCalled, true);
+    assert.deepEqual(calls, ["session:fresh-session"]);
 });
 
 test("proxy failures return 503 and log a request ID and route without sensitive values", () => {
