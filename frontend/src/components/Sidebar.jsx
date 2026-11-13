@@ -1,4 +1,3 @@
-import React from 'react'
 import { AnimatePresence, motion } from "motion/react"
 import { GiArtificialHive, GiTwoCoins } from 'react-icons/gi'
 import { FiBookmark, FiBriefcase, FiEdit, FiFileText, FiLogOut, FiMail, FiMap, FiPlus, FiSidebar, FiStar } from 'react-icons/fi'
@@ -60,7 +59,7 @@ function Sidebar({
 
 
     const inner = (
-        <div className='flex flex-col h-full'>
+        <div className='flex h-full min-h-0 flex-col'>
             <div className={`px-3 h-[52px] border-b border-black/8 shrink-0 flex items-center ${sidebarOpen ? "justify-between" : "justify-center"
                 }`}>
                 {sidebarOpen && (
@@ -118,7 +117,7 @@ function Sidebar({
                     </AnimatePresence>
                 </motion.button>
             </div>
-            <nav className='flex flex-1 flex-col gap-0.5 overflow-y-auto px-2.5'>
+            <nav className='flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2.5'>
                 {sidebarOpen && <p className='mx-0.5 mt-2.5 mb-1 inline-flex w-fit items-center border-2 border-black border-l-4 border-l-sky-700 bg-sky-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-sky-950 shadow-[2px_2px_0_#171717]'>Agents</p>}
                 {AGENT_ITEMS.map((nav) => (
                     <motion.button key={nav.path}
@@ -159,33 +158,29 @@ function Sidebar({
             {/* coins */}
 
             <div className='border-t border-black/8 p-2.5 shrink-0'>
-                <AnimatePresence>
-                    {sidebarOpen &&
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.13 }}
-                            onClick={() => navigate("/billing")}
-                            className='group flex cursor-pointer items-center justify-between gap-2.5 rounded-lg border border-white/10 bg-[#000000]/90 backdrop-blur-2xl px-2.5 py-1.5 mb-2.5 transition-all hover:border-white/20 shadow-[0_8px_24px_rgba(0,0,0,0.2)]'>
-                            <div className='flex items-center gap-1.5'>
-                                <GiTwoCoins size={17} className='text-sky-800 shrink-0' />
+                <motion.button
+                    type='button'
+                    onClick={() => navigate("/billing")}
+                    initial={false}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.13 }}
+                    aria-label={`Interview coins: ${user?.interviewCoin ?? 0}`}
+                    className={`group mb-2.5 flex w-full cursor-pointer items-center rounded-lg border border-white/10 bg-[#000000]/90 py-1.5 text-left shadow-[0_8px_24px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition-all hover:border-white/20 ${sidebarOpen ? "justify-between gap-2.5 px-2.5" : "justify-center gap-1 px-1"}`}>
+                    <span className='flex items-center gap-1.5'>
+                        <GiTwoCoins size={17} className='shrink-0 text-sky-800' />
+                        {sidebarOpen ? (
+                            <span className='flex flex-col'>
+                                <span className='text-[9px] font-medium uppercase tracking-wider text-white/40'>Interview Coins</span>
+                                <span className='text-xs font-bold text-white'>{user?.interviewCoin ?? 0}</span>
+                            </span>
+                        ) : (
+                            <span className='text-xs font-bold text-white'>{user?.interviewCoin ?? 0}</span>
+                        )}
+                    </span>
+                    {sidebarOpen && <FaCirclePlus size={16} className='text-white/70 transition-transform duration-200 group-hover:scale-110' />}
+                </motion.button>
 
-                                <div className='flex flex-col'>
-                                    <span className='text-[9px] uppercase tracking-wider text-white/40 font-medium'>Interview Coins</span>
-                                    <span className='text-xs font-bold text-white'>{user?.interviewCoin}</span>
-                                </div>
-                            </div>
-
-                            <div className='flex items-center justify-center'>
-                                <FaCirclePlus size={16} className='text-white/70 transition-transform duration-200 group-hover:scale-110' />
-                            </div>
-
-
-                        </motion.div>}
-                </AnimatePresence>
-
-                <div className={`flex items-center gap-2 rounded-lg border-2 border-black bg-sky-100 p-2 ${sidebarOpen ? "" : "justify-center"}`}>
+                <div className={`flex rounded-lg border-2 border-black bg-sky-100 p-2 ${sidebarOpen ? "items-center gap-2" : "flex-col items-center gap-1"}`}>
                     <div className='w-8 h-8 rounded-full bg-sky-900 flex items-center justify-center shrink-0'>
                         <span className='text-white font-extrabold text-[11px]'>
                             {avatar}
@@ -214,22 +209,17 @@ function Sidebar({
                         )}
                     </AnimatePresence>
 
-                    <AnimatePresence>
-                        {sidebarOpen && (
-
-                            <motion.button
-                                onClick={onLogout}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                whileHover={{ scale: 1.15 }}
-                                aria-label="Sign out"
-                                title="Sign out"
-                                className='text-black/30 hover:text-[#0A0A0A] transition-colors ml-auto cursor-pointer'>
-                                <FiLogOut size={13} />
-                            </motion.button>
-                        )}
-                    </AnimatePresence>
+                    <motion.button
+                        type='button'
+                        onClick={onLogout}
+                        initial={false}
+                        animate={{ opacity: 1 }}
+                        whileHover={{ scale: 1.15 }}
+                        aria-label="Sign out"
+                        title="Sign out"
+                        className={`cursor-pointer text-black/30 transition-colors hover:text-[#0A0A0A] ${sidebarOpen ? "ml-auto" : ""}`}>
+                        <FiLogOut size={13} />
+                    </motion.button>
                 </div>
             </div>
 
