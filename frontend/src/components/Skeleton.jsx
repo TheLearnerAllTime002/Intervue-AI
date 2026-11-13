@@ -1,4 +1,20 @@
-import React from "react"
+import { useEffect, useState } from "react"
+
+export function useDelayedLoading(active, delay = 180) {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (!active) {
+      setVisible(false)
+      return undefined
+    }
+
+    const timer = window.setTimeout(() => setVisible(true), delay)
+    return () => window.clearTimeout(timer)
+  }, [active, delay])
+
+  return visible
+}
 
 export function Skeleton({ className = "" }) {
   return <span aria-hidden="true" className={`skeleton-shimmer block ${className}`} />

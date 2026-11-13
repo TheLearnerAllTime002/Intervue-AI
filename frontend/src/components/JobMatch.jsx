@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FiBriefcase, FiCheck, FiCopy, FiFileText, FiTarget, FiZap } from "react-icons/fi";
 import api from "../utils/axios";
+import { Skeleton, useDelayedLoading } from "./Skeleton";
 
 function SkillList({ title, items, icon: Icon, emptyText, tone }) {
   return (
@@ -27,6 +28,8 @@ export default function JobMatch() {
   const [role, setRole] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const showMatchSkeleton = useDelayedLoading(loading);
+  const showMaterialsSkeleton = useDelayedLoading(materialsLoading);
 
   const runMatch = async (event) => {
     event.preventDefault();
@@ -105,6 +108,8 @@ export default function JobMatch() {
         </div>
       </form>
 
+      {showMatchSkeleton && <div aria-label="Matching resume to job" aria-busy="true" className="space-y-3 border-t-2 border-black pt-4"><div className="flex gap-3 border-2 border-black bg-white p-4"><Skeleton className="h-16 w-16 shrink-0" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /></div></div><div className="grid gap-3 md:grid-cols-2"><Skeleton className="h-24" /><Skeleton className="h-24" /></div></div>}
+
       {error && <p role="alert" className="border-2 border-black bg-red-100 p-3 text-sm font-bold text-red-950">{error}</p>}
 
       {match && (
@@ -135,6 +140,8 @@ export default function JobMatch() {
           </div>
         </div>
       )}
+
+      {showMaterialsSkeleton && <div aria-label="Generating application materials" aria-busy="true" className="grid gap-3 border-t-2 border-black pt-4 xl:grid-cols-2"><div className="space-y-3 border-2 border-black bg-white p-4"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-5/6" /><Skeleton className="h-3 w-3/4" /></div><div className="space-y-3 border-2 border-black bg-white p-4"><Skeleton className="h-5 w-3/5" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-2/3" /></div></div>}
 
       {materials && (
         <div className="grid gap-3 border-t-2 border-black pt-4 xl:grid-cols-2" aria-live="polite">

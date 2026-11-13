@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom"
 import { useSelector } from "react-redux"
 import { generateCoverLetter, getCoverLetterHistory } from "../apis/resume.api"
 import { spendCoins } from "../apis/user.api"
+import { Skeleton, useDelayedLoading } from "../components/Skeleton"
 
 const TONES = [
     { value: "professional", label: "Professional", desc: "Confident & polished" },
@@ -97,6 +98,7 @@ function CoverLetter({ user, setUser }) {
     const [copied, setCopied] = useState(false)
     const [showAdvanced, setShowAdvanced] = useState(false)
     const [history, setHistory] = useState([])
+    const showGenerationSkeleton = useDelayedLoading(loading)
 
     useEffect(() => {
         getCoverLetterHistory().then((res) => { if (res?.success) setHistory(res.data || []) }).catch(() => {})
@@ -341,8 +343,9 @@ function CoverLetter({ user, setUser }) {
 
                             {loading && (
                                 <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                    className="flex min-h-[400px] flex-col items-center justify-center border-2 border-black bg-sky-50 p-8 text-center shadow-[4px_4px_0_#171717]">
+                                    className="min-h-[400px] border-2 border-black bg-sky-50 p-6 shadow-[4px_4px_0_#171717] sm:p-8">
                                     <div className="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-black/20 border-t-sky-600" />
+                                    {showGenerationSkeleton && <div aria-label="Cover letter preview loading" aria-busy="true" className="mx-auto mt-8 w-full max-w-lg space-y-3"><Skeleton className="mx-auto h-4 w-3/5" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-5/6" /><Skeleton className="h-3 w-11/12" /><Skeleton className="h-3 w-3/4" /></div>}
                                     <p className="text-sm font-extrabold text-sky-950">Writing your cover letter…</p>
                                     <p className="mt-1 text-xs font-medium text-black/50">Analyzing job requirements and matching your experience</p>
                                 </motion.div>

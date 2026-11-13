@@ -29,7 +29,7 @@
     content: "";
     transform: translateX(-100%);
     background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 78%) 48%, transparent 76%);
-    animation: skeleton-sweep 1.35s ease-in-out infinite;
+    animation: skeleton-sweep 1.35s ease-in-out 100ms infinite;
 }
 
 @keyframes skeleton-sweep {

@@ -8,6 +8,7 @@ import api from '../../utils/axios'
 import { setResume } from '../../redux/resumeSlice'
 import { startInterview } from '../../apis/interview.api'
 import { formatFileSize, validateResumeFile } from '../../utils/validateResumeFile'
+import { Skeleton, useDelayedLoading } from '../Skeleton'
 function Step1setup({ user, setUser }) {
     const navigate = useNavigate()
     const dispatch = useDispatch()
@@ -26,6 +27,7 @@ function Step1setup({ user, setUser }) {
     const [analysisStarted, setAnalysisStarted] = useState(false)
     const [starting, setStarting] = useState(false)
     const [startError, setStartError] = useState("")
+    const showStartSkeleton = useDelayedLoading(starting)
 
     const useResumeEnabled = useResume === null ? !!resume : useResume
 
@@ -351,6 +353,7 @@ function Step1setup({ user, setUser }) {
                         )}
 
                     </motion.button>
+                    {showStartSkeleton && <div aria-label="Preparing interview" aria-busy="true" className="mt-4 space-y-2 border-2 border-black bg-white p-3"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /></div>}
                     {startError && <p role="alert" className='mt-3 text-xs font-bold text-red-800'>{startError}</p>}
 
                 </div>
