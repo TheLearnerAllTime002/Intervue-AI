@@ -5,7 +5,7 @@ import { FaArrowRight } from "react-icons/fa6";
 import LoginModel from '../components/LoginModel';
 import { useState } from 'react';
 import dashboard from "../assets/image.png"
-import { FiMic, FiFileText, FiBarChart2, FiMap, FiUser, FiShield, FiMail, FiExternalLink } from "react-icons/fi";
+import { FiMic, FiFileText, FiBarChart2, FiMap, FiUsers, FiShield, FiMail } from "react-icons/fi";
 import { Link } from 'react-router-dom'
 
 const prepSteps = [
@@ -34,16 +34,6 @@ function Home({ setUser }) {
 
                     <span className='font-extrabold text-base tracking-tight text-[#0A0A0A]'>Intervue AI</span>
                 </div>
-
-                <a
-                    href="https://www.linkedin.com/in/arjun-mitra-2761a9260/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mr-2 ml-auto inline-flex items-center gap-1.5 border-2 border-black bg-sky-200 px-2.5 py-1.5 text-[10px] font-black text-black shadow-[2px_2px_0_#171717] transition-transform hover:-translate-y-0.5 sm:mr-4 sm:gap-2 sm:px-3 sm:text-xs"
-                    aria-label="About Me, Arjun Mitra, on LinkedIn"
-                >
-                    <FiUser size={14} /> <span className="hidden sm:inline">About Me · Arjun Mitra</span><span className="sm:hidden">Arjun</span><FiExternalLink size={12} />
-                </a>
 
                 <motion.button
                     onClick={() => setShowLogin(true)}
@@ -110,10 +100,10 @@ function Home({ setUser }) {
                         <span className='flex items-center gap-1.5'><FiMap className='text-sky-800' /> Personal roadmap</span>
                     </div>
                     <div className="mx-auto mt-8 grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-3 lg:mx-0">
-                        <a href="https://www.linkedin.com/in/arjun-mitra-2761a9260/" target="_blank" rel="noreferrer" className="group flex items-center gap-3 border-2 border-black bg-sky-200 p-3 text-left shadow-[3px_3px_0_#171717] transition-transform hover:-translate-y-1">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black bg-white text-sky-950"><FiUser size={17} /></span>
-                            <span className="min-w-0"><span className="block text-[9px] font-black uppercase tracking-wider text-sky-950/65">Meet the creator</span><span className="block truncate text-xs font-black text-black">About Me · Arjun Mitra</span></span><FiExternalLink className="ml-auto shrink-0" size={13} />
-                        </a>
+                        <Link to="/about" className="group flex items-center gap-3 border-2 border-black bg-sky-200 p-3 text-left shadow-[3px_3px_0_#171717] transition-transform hover:-translate-y-1">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black bg-white text-sky-950"><FiUsers size={17} /></span>
+                            <span className="min-w-0"><span className="block text-[9px] font-black uppercase tracking-wider text-sky-950/65">The project</span><span className="block truncate text-xs font-black text-black">About Us</span></span>
+                        </Link>
                         <Link to="/privacy-policy" className="group flex items-center gap-3 border-2 border-black bg-yellow-300 p-3 text-left shadow-[3px_3px_0_#171717] transition-transform hover:-translate-y-1">
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black bg-white text-sky-950"><FiShield size={17} /></span>
                             <span><span className="block text-[9px] font-black uppercase tracking-wider text-black/60">Your data</span><span className="block text-xs font-black text-black">Privacy Policy</span></span>
@@ -271,7 +261,7 @@ function Home({ setUser }) {
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-extrabold text-sky-900">
                     <Link to='/contact' className='inline-flex items-center gap-1 underline'><FiMail /> Contact Us</Link>
                     <Link to='/privacy-policy' className='inline-flex items-center gap-1 underline'><FiShield /> Privacy Policy</Link>
-                    <a href="https://www.linkedin.com/in/arjun-mitra-2761a9260/" target="_blank" rel="noreferrer" className='inline-flex items-center gap-1 underline'><FiUser /> About Me · Arjun Mitra <FiExternalLink /></a>
+                    <Link to='/about' className='inline-flex items-center gap-1 underline'><FiUsers /> About Us</Link>
                 </div>
                 </footer>
 
