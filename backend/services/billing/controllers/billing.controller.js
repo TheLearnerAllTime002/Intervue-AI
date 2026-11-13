@@ -213,6 +213,7 @@ export const getBillingHistory = async (req, res) => {
     if (!user.coinLedgerInitialized) {
       const paidOrders = await Billing.find({ userId, status: "paid" }).sort({ updatedAt: 1 });
       for (const order of paidOrders) {
+        if (!order.razorpayOrderId) continue;
         await User.findOneAndUpdate(
           { _id: userId, processedBillingOrderIds: { $ne: order.razorpayOrderId } },
           {
@@ -252,7 +253,7 @@ export const getBillingHistory = async (req, res) => {
     return res.status(200).json({
       success: true,
       interviewCoin: latestUser?.interviewCoin ?? 0,
-      transactions: transactions.slice(0, 100),
+      transactions,
     });
   } catch (error) {
     console.error("Could not load billing history:", error.code || error.name || "unknown");
