@@ -58,7 +58,9 @@ function App() {
       } catch (error) {
         console.error("Session restoration failed:", error)
         if (active && revision === authRevision) {
-          setUser(null)
+          // If we already have a validated user from LoginModel, do not wipe it out
+          // unless the user actually logged out (which is handled by !firebaseUser).
+          setUser((currentUser) => currentUser || null)
           setAuthError(error)
         }
       } finally {
@@ -126,7 +128,7 @@ function App() {
     )
   }
 
-  if (authError) {
+  if (authError && !user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-sky-50 px-6 text-center">
         <section className="max-w-md border-2 border-black bg-white p-8 shadow-[6px_6px_0_#171717]">
