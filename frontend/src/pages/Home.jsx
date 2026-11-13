@@ -99,20 +99,6 @@ function Home({ setUser }) {
                         <span className='flex items-center gap-1.5'><FiBarChart2 className='text-sky-800' /> Actionable feedback</span>
                         <span className='flex items-center gap-1.5'><FiMap className='text-sky-800' /> Personal roadmap</span>
                     </div>
-                    <div className="mx-auto mt-8 grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-3 lg:mx-0">
-                        <Link to="/about" className="group flex items-center gap-3 border-2 border-black bg-sky-200 p-3 text-left shadow-[3px_3px_0_#171717] transition-transform hover:-translate-y-1">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black bg-white text-sky-950"><FiUsers size={17} /></span>
-                            <span className="min-w-0"><span className="block text-[9px] font-black uppercase tracking-wider text-sky-950/65">The project</span><span className="block truncate text-xs font-black text-black">About Us</span></span>
-                        </Link>
-                        <Link to="/privacy-policy" className="group flex items-center gap-3 border-2 border-black bg-yellow-300 p-3 text-left shadow-[3px_3px_0_#171717] transition-transform hover:-translate-y-1">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black bg-white text-sky-950"><FiShield size={17} /></span>
-                            <span><span className="block text-[9px] font-black uppercase tracking-wider text-black/60">Your data</span><span className="block text-xs font-black text-black">Privacy Policy</span></span>
-                        </Link>
-                        <Link to="/contact" className="group flex items-center gap-3 border-2 border-black bg-white p-3 text-left shadow-[3px_3px_0_#171717] transition-transform hover:-translate-y-1">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black bg-sky-200 text-sky-950"><FiMail size={17} /></span>
-                            <span><span className="block text-[9px] font-black uppercase tracking-wider text-black/55">Questions or feedback</span><span className="block text-xs font-black text-black">Contact Us</span></span>
-                        </Link>
-                    </div>
                 </div>
 
                 <motion.div
