@@ -7,6 +7,13 @@ import { useState } from 'react';
 import dashboard from "../assets/image.png"
 import { FiMic, FiFileText, FiBarChart2, FiMap } from "react-icons/fi";
 import { Link } from 'react-router-dom'
+
+const prepSteps = [
+    { number: '01', title: 'Set your target', description: 'Choose a role and experience level so every practice session starts with the right context.' },
+    { number: '02', title: 'Practice out loud', description: 'Work through realistic questions with an AI interviewer, at your own pace.' },
+    { number: '03', title: 'Turn feedback into progress', description: 'Review clear feedback and follow a roadmap built around your next steps.' },
+]
+
 function Home({ setUser }) {
     const [showLogin, setShowLogin] = useState(false)
     return (
@@ -111,6 +118,43 @@ function Home({ setUser }) {
                 </motion.div>
                 </div>
 
+            </section>
+
+            {/* How it works */}
+            <section className='relative overflow-hidden bg-[#fff9e9] px-5 py-20 sm:px-8 sm:py-28'>
+                <div className='pointer-events-none absolute -right-24 top-12 h-72 w-72 rounded-full bg-sky-200/50 blur-3xl' />
+                <div className='relative mx-auto max-w-6xl'>
+                    <motion.div
+                        initial={{ opacity: 0, y: 24 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.35 }}
+                        transition={{ duration: 0.55 }}
+                        className='mx-auto mb-14 max-w-2xl text-center'>
+                        <span className='inline-flex border-2 border-black bg-yellow-300 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-black shadow-[3px_3px_0_#171717]'>Your path to interview-ready</span>
+                        <h2 className='mt-6 font-serif text-3xl font-black leading-tight tracking-[-0.04em] text-black sm:text-5xl'>A little practice.<br /><span className='text-sky-950'>A lot more confidence.</span></h2>
+                        <p className='mx-auto mt-4 max-w-xl text-sm font-medium leading-7 text-sky-950 sm:text-base'>Move from your target role to a clear plan, one focused step at a time.</p>
+                    </motion.div>
+
+                    <div className='relative grid gap-5 md:grid-cols-3'>
+                        <svg aria-hidden='true' className='pointer-events-none absolute left-[16%] right-[16%] top-11 hidden h-16 w-[68%] overflow-visible md:block' viewBox='0 0 800 80' fill='none' preserveAspectRatio='none'>
+                            <motion.path d='M5 40 C 150 5, 245 75, 400 40 S 650 5, 795 40' stroke='#171717' strokeWidth='3' strokeDasharray='8 10' initial={{ pathLength: 0, opacity: 0 }} whileInView={{ pathLength: 1, opacity: 1 }} viewport={{ once: true, amount: 0.6 }} transition={{ duration: 1.4, ease: 'easeInOut' }} />
+                            <motion.circle r='7' fill='#8bd8ff' stroke='#171717' strokeWidth='3' initial={{ cx: 5, cy: 40 }} whileInView={{ cx: 795, cy: 40 }} viewport={{ once: true, amount: 0.6 }} transition={{ duration: 2.2, ease: 'easeInOut', delay: 0.15 }} />
+                        </svg>
+                        {prepSteps.map((step, index) => (
+                            <motion.article
+                                key={step.number}
+                                initial={{ opacity: 0, y: 34 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, amount: 0.3 }}
+                                transition={{ duration: 0.5, delay: index * 0.15 }}
+                                className={`relative z-10 border-2 border-black p-6 shadow-[5px_5px_0_#171717] ${index === 1 ? 'bg-sky-200' : 'bg-white'}`}>
+                                <div className='mb-6 flex h-12 w-12 items-center justify-center border-2 border-black bg-yellow-300 font-mono text-sm font-black shadow-[3px_3px_0_#171717]'>{step.number}</div>
+                                <h3 className='mb-2 font-serif text-xl font-black tracking-tight text-black'>{step.title}</h3>
+                                <p className='text-sm font-medium leading-6 text-sky-950'>{step.description}</p>
+                            </motion.article>
+                        ))}
+                    </div>
+                </div>
             </section>
 
             {/* Agents */}
