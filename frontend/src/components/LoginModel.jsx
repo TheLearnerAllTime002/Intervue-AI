@@ -4,7 +4,7 @@ import { motion } from "motion/react"
 import { FcGoogle } from "react-icons/fc";
 import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { auth, provider } from '../utils/firebase';
-import { establishBackendSession } from '../apis/user.api';
+import { establishBackendSession, getCurrentUser } from '../apis/user.api';
 
 function LoginModel({ onClose, setUser }) {
     const [isSigningIn, setIsSigningIn] = useState(false)
@@ -21,11 +21,12 @@ function LoginModel({ onClose, setUser }) {
             // Firebase operation first can consume the browser user gesture
             // and cause the popup to be blocked.
             const result = await signInWithPopup(auth, provider)
-            const response = await establishBackendSession(result.user)
+            await establishBackendSession(result.user)
 
+            const response = await getCurrentUser()
             const backendUser = response?.user ?? response?.data?.user
             if (!backendUser?.userId && !backendUser?._id) {
-                throw new Error('The backend did not return an authenticated user.')
+                throw new Error('Backend session verification failed.')
             }
             setUser(backendUser)
             onClose()

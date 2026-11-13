@@ -33,24 +33,34 @@ function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       const revision = ++authRevision
+
       if (!firebaseUser) {
-        setUser(null)
-        setAuthError(null)
-        setLoading(false)
+        if (active) {
+          setUser(null)
+          setAuthError(null)
+          setLoading(false)
+        }
         return
       }
 
-      // Keep the Firebase observer active after startup so popup and redirect
-      // sign-ins always update the route guard's React user state.
       try {
         const result = await restoreBackendSession(firebaseUser)
         if (active && revision === authRevision) {
-          setUser(result?.user ?? null)
+          const backendUser = result?.user ?? result?.data?.user
+
+          if (!backendUser?.userId && !backendUser?._id) {
+            throw new Error("Backend session returned no valid user.")
+          }
+
+          setUser(backendUser)
           setAuthError(null)
         }
       } catch (error) {
-        console.error("Could not restore the backend session:", error.response?.status || error.code || "network error")
-        if (active && revision === authRevision) setAuthError(error)
+        console.error("Session restoration failed:", error)
+        if (active && revision === authRevision) {
+          setUser(null)
+          setAuthError(error)
+        }
       } finally {
         if (active && revision === authRevision) setLoading(false)
       }

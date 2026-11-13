@@ -1,5 +1,4 @@
 import axios from "axios";
-import { auth } from "./firebase";
 import { installApiResilience } from "./apiResilience";
 
 
@@ -8,6 +7,6 @@ const api = axios.create({
     withCredentials:true
 })
 
-installApiResilience(api, auth);
+installApiResilience(api);
 
 export default api
