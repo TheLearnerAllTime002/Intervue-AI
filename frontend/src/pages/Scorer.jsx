@@ -10,7 +10,7 @@ import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts"
 import { spendCoins } from '../apis/user.api'
 import JobMatch from '../components/JobMatch'
 import { formatFileSize, validateResumeFile } from '../utils/validateResumeFile'
-import { Skeleton, useDelayedLoading } from '../components/Skeleton'
+import { DelayedSkeleton, Skeleton } from '../components/Skeleton'
 const ScoreRing = ({ score }) => {
     const color = score >= 75 ? "#16a34a" : score >= 50 ? "#f59e0b" : "#ef4444";
     return (
@@ -86,7 +86,6 @@ function Scorer({ user, setUser }) {
     const [uploadNotice, setUploadNotice] = useState("")
     const [uploadProgress, setUploadProgress] = useState(0)
     const [analysisStarted, setAnalysisStarted] = useState(false)
-    const showAnalysisSkeleton = useDelayedLoading(loading && analysisStarted)
     const dispatch = useDispatch()
     const { resume } = useSelector((state) => state.resume)
 
@@ -335,7 +334,7 @@ function Scorer({ user, setUser }) {
                             <div className="flex justify-between text-xs font-bold"><span>{analysisStarted ? "Analyzing resume..." : "Uploading PDF..."}</span><span>{uploadProgress}%</span></div>
                             <div role="progressbar" aria-label="Resume upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadProgress} className="mt-2 h-3 border-2 border-black bg-white"><div className="h-full bg-sky-400 transition-[width]" style={{ width: `${uploadProgress}%` }} /></div>
                             {analysisStarted && <p className="mt-2 animate-pulse text-[10px] font-semibold text-sky-950">Upload complete. Extracting and analyzing resume content.</p>}
-                            {showAnalysisSkeleton && <div aria-label="Preparing resume analysis" aria-busy="true" className="mt-4 space-y-2 border-t border-black/15 pt-3"><Skeleton className="h-4 w-2/5" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /><Skeleton className="h-20 w-full" /></div>}
+                            <DelayedSkeleton active={loading && analysisStarted}><div aria-label="Preparing resume analysis" aria-busy="true" className="mt-4 space-y-2 border-t border-black/15 pt-3"><Skeleton className="h-4 w-2/5" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /><Skeleton className="h-20 w-full" /></div></DelayedSkeleton>
                         </div>
                     )}
                     {uploadError && <p role="alert" className="relative mt-3 border-2 border-red-900 bg-red-100 p-2 text-xs font-bold text-red-950">{uploadError}</p>}

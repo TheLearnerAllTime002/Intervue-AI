@@ -21,7 +21,7 @@ export const login = createLoginHandler({
   redis,
 });
 
-export const logout = createLogoutHandler({ redis });
+export const logout = createLogoutHandler({ redis, User });
 export const useInterviewCoins = async (req, res) => {
   try {
     const sessionId = getSessionId(req.cookies);
@@ -43,20 +43,35 @@ export const useInterviewCoins = async (req, res) => {
       return res.status(400).json({ success: false, message: "Choose a valid coin action and cost." });
     }
 
-    const currentCoins = Number(sessionData.interviewCoin) || 0;
-    if (currentCoins < coinAction.coins) {
+    const historyEntry = { kind: "usage", action, coins: coinAction.coins, createdAt: new Date() };
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: sessionData.userId, interviewCoin: { $gte: coinAction.coins } },
+      {
+        $inc: { interviewCoin: -coinAction.coins },
+        $push: { coinHistory: { $each: [historyEntry], $slice: -100 } },
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      const storedUser = await User.findById(sessionData.userId).select("interviewCoin");
+      if (!storedUser) return res.status(401).json({ success: false, message: "Please sign in again." });
       return res.status(403).json({
         success: false,
         message: "Not enough interview coins",
-        interviewCoin: currentCoins,
+        interviewCoin: Number(storedUser.interviewCoin) || 0,
       });
     }
 
-    const newBalance = currentCoins - coinAction.coins;
+    const newBalance = Number(updatedUser.interviewCoin) || 0;
     sessionData.interviewCoin = newBalance;
-    const historyEntry = { kind: "usage", action, coins: coinAction.coins, createdAt: new Date().toISOString() };
-    sessionData.coinHistory = [...(sessionData.coinHistory || []).slice(-99), historyEntry];
-    await redis.set(`session:${sessionId}`, JSON.stringify(sessionData), "EX", SESSION_TTL_SECONDS);
+    sessionData.coinHistory = updatedUser.coinHistory || [];
+    sessionData.coinPersistenceVersion = 1;
+    try {
+      await redis.set(`session:${sessionId}`, JSON.stringify(sessionData), "EX", SESSION_TTL_SECONDS);
+    } catch (sessionError) {
+      console.error("Could not refresh coin balance in the active session:", sessionError.code || sessionError.name || "unknown");
+    }
 
     return res.status(200).json({
       success: true,
@@ -82,10 +97,12 @@ export const getCoinHistory = async (req, res) => {
     if (!sessionRaw) return res.status(401).json({ success: false, message: "Session expired. Please sign in again." });
 
     const sessionData = JSON.parse(sessionRaw);
+    const user = await User.findById(sessionData.userId).select("interviewCoin coinHistory").lean();
+    if (!user) return res.status(401).json({ success: false, message: "Please sign in again." });
     return res.status(200).json({
       success: true,
-      interviewCoin: sessionData.interviewCoin ?? 0,
-      transactions: sessionData.coinHistory ?? [],
+      interviewCoin: user.interviewCoin ?? 0,
+      transactions: user.coinHistory ?? [],
     });
   } catch (error) {
     console.error(JSON.stringify({ event: "AUTH_COIN_HISTORY_FAILURE", requestId: req.requestId || "unknown", code: error?.code || error?.name || "unknown" }));

@@ -15,6 +15,7 @@ const coinTransactionSchema = new mongoose.Schema({
   action: { type: String, required: true },
   coins: { type: Number, required: true },
   createdAt: { type: Date, default: Date.now },
+  referenceId: { type: String },
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
@@ -24,6 +25,7 @@ const userSchema = new mongoose.Schema({
   interviewCoin: { type: Number, default: 150 },
   processedBillingOrderIds: { type: [String], default: [] },
   coinHistory: { type: [coinTransactionSchema], default: [] },
+  coinLedgerInitialized: { type: Boolean, default: false },
 }, { timestamps: true });
 
 const User = authConnection.model("User", userSchema);

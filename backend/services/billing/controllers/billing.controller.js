@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import razorpay from "../configs/razorpay.js";
 import Billing from "../models/billing.model.js";
+import User from "../models/user.model.js";
 import { getRedisClient } from "../../../shared/redis/redis.js";
 import { SESSION_TTL_SECONDS } from "../../../shared/sessionConfig.js";
 
@@ -117,34 +118,54 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-    // Idempotency: if already paid, just return current session coin balance
+    // Idempotency: paid orders return the durable user balance.
     if (payment.status === "paid") {
-      const sessionRaw = sessionId ? await redis.get(`session:${sessionId}`) : null;
-      const currentCoins = sessionRaw ? JSON.parse(sessionRaw).interviewCoin : 0;
+      const user = await User.findById(userId).select("interviewCoin");
+      const currentCoins = user?.interviewCoin ?? 0;
       return res.status(200).json({ success: true, message: "Payment already verified.", interviewCoin: currentCoins });
     }
 
-    // Mark order paid
+    if (!sessionId) {
+      return res.status(400).json({ success: false, message: "Session missing. Please sign in and retry." });
+    }
+
+    const purchaseEntry = {
+      kind: "purchase",
+      action: "coin-purchase",
+      coins: payment.interviewCoins,
+      createdAt: new Date(),
+      referenceId: orderId,
+    };
+    let user = await User.findOneAndUpdate(
+      { _id: userId, processedBillingOrderIds: { $ne: orderId } },
+      {
+        $inc: { interviewCoin: payment.interviewCoins },
+        $push: { coinHistory: { $each: [purchaseEntry], $slice: -100 } },
+        $addToSet: { processedBillingOrderIds: orderId },
+      },
+      { new: true }
+    );
+
+    if (!user) user = await User.findById(userId).select("interviewCoin");
+    if (!user) return res.status(404).json({ success: false, message: "Account not found for this payment." });
+
     payment.status = "paid";
     payment.razorpayPaymentId = paymentId;
     payment.razorpaySignature = signature;
     await payment.save();
 
-    // Update Redis session with new coin balance
-    if (!sessionId) {
-      return res.status(400).json({ success: false, message: "Session missing. Please sign in and retry." });
+    const newCoinBalance = Number(user.interviewCoin) || 0;
+    try {
+      const sessionRaw = await redis.get(`session:${sessionId}`);
+      if (sessionRaw) {
+        const sessionData = JSON.parse(sessionRaw);
+        sessionData.interviewCoin = newCoinBalance;
+        sessionData.coinPersistenceVersion = 1;
+        await redis.set(`session:${sessionId}`, JSON.stringify(sessionData), "EX", SESSION_TTL_SECONDS);
+      }
+    } catch (sessionError) {
+      console.error("Could not refresh the billing session balance:", sessionError.code || sessionError.name || "unknown");
     }
-
-    const sessionRaw = await redis.get(`session:${sessionId}`);
-    if (!sessionRaw) {
-      return res.status(401).json({ success: false, message: "Session expired. Please sign in again." });
-    }
-
-    const sessionData = JSON.parse(sessionRaw);
-    const newCoinBalance = (Number(sessionData.interviewCoin) || 0) + payment.interviewCoins;
-    sessionData.interviewCoin = newCoinBalance;
-
-    await redis.set(`session:${sessionId}`, JSON.stringify(sessionData), "EX", SESSION_TTL_SECONDS);
 
     return res.status(200).json({
       success: true,
@@ -157,5 +178,84 @@ export const verifyPayment = async (req, res) => {
       success: false,
       message: "Could not verify payment. If money was deducted, retry from your purchase page.",
     });
+  }
+};
+
+export const getBillingHistory = async (req, res) => {
+  try {
+    const userId = req.headers["x-user-id"];
+    if (!userId) return res.status(401).json({ success: false, message: "Please sign in again." });
+
+    let user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "Account not found." });
+
+    // If a user still has a session created before coin persistence was added,
+    // preserve its latest balance and usage history before reconciling purchases.
+    const sessionId = req.headers["x-session-id"];
+    const sessionRaw = sessionId ? await redis.get(`session:${sessionId}`) : null;
+    if (!user.coinLedgerInitialized && sessionRaw) {
+      const session = JSON.parse(sessionRaw);
+      if (session.coinPersistenceVersion !== 1) {
+        user = await User.findOneAndUpdate(
+          { _id: userId, coinLedgerInitialized: { $ne: true } },
+          {
+            $set: {
+              interviewCoin: Number(session.interviewCoin) || 0,
+              coinHistory: session.coinHistory || [],
+              coinLedgerInitialized: true,
+            },
+          },
+          { new: true }
+        ) || user;
+      }
+    }
+
+    if (!user.coinLedgerInitialized) {
+      const paidOrders = await Billing.find({ userId, status: "paid" }).sort({ updatedAt: 1 });
+      for (const order of paidOrders) {
+        await User.findOneAndUpdate(
+          { _id: userId, processedBillingOrderIds: { $ne: order.razorpayOrderId } },
+          {
+            $inc: { interviewCoin: order.interviewCoins },
+            $push: {
+              coinHistory: {
+                $each: [{ kind: "purchase", action: "coin-purchase", coins: order.interviewCoins, createdAt: order.updatedAt || order.createdAt, referenceId: order.razorpayOrderId }],
+                $slice: -100,
+              },
+            },
+            $addToSet: { processedBillingOrderIds: order.razorpayOrderId },
+          }
+        );
+      }
+      user = await User.findByIdAndUpdate(userId, { $set: { coinLedgerInitialized: true } }, { new: true });
+    }
+
+    const [latestUser, paidOrders] = await Promise.all([
+      User.findById(userId).select("interviewCoin coinHistory").lean(),
+      Billing.find({ userId, status: "paid" }).select("interviewCoins razorpayOrderId createdAt updatedAt").lean(),
+    ]);
+    const transactions = [...(latestUser?.coinHistory || [])];
+    const knownPurchases = new Set(transactions.map((entry) => entry.referenceId).filter(Boolean));
+    for (const order of paidOrders) {
+      if (order.razorpayOrderId && !knownPurchases.has(order.razorpayOrderId)) {
+        transactions.push({
+          kind: "purchase",
+          action: "coin-purchase",
+          coins: order.interviewCoins,
+          createdAt: order.updatedAt || order.createdAt,
+          referenceId: order.razorpayOrderId,
+        });
+      }
+    }
+    transactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return res.status(200).json({
+      success: true,
+      interviewCoin: latestUser?.interviewCoin ?? 0,
+      transactions: transactions.slice(0, 100),
+    });
+  } catch (error) {
+    console.error("Could not load billing history:", error.code || error.name || "unknown");
+    return res.status(500).json({ success: false, message: "Could not load coin history." });
   }
 };

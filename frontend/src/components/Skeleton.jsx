@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react"
 
-export function useDelayedLoading(active, delay = 180) {
+function DelayedSkeletonContent({ delay, children }) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    if (!active) {
-      setVisible(false)
-      return undefined
-    }
-
     const timer = window.setTimeout(() => setVisible(true), delay)
     return () => window.clearTimeout(timer)
-  }, [active, delay])
+  }, [delay])
 
-  return visible
+  return visible ? children : null
+}
+
+export function DelayedSkeleton({ active, delay = 180, children }) {
+  if (!active) return null
+  return <DelayedSkeletonContent delay={delay}>{children}</DelayedSkeletonContent>
 }
 
 export function Skeleton({ className = "" }) {

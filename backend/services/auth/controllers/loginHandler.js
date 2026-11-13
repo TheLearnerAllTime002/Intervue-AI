@@ -60,6 +60,8 @@ export const createLoginHandler = ({ verifyIdToken, User, redis, logger = consol
             name: user.name,
             email: user.email,
             interviewCoin: user.interviewCoin,
+            coinHistory: user.coinHistory || [],
+            coinPersistenceVersion: 1,
         };
         await redis.set(`session:${sessionId}`, JSON.stringify(session), "EX", SESSION_TTL_SECONDS);
         log("REDIS_SESSION_WRITE_SUCCESS", { namespace: "session:", ttlSeconds: SESSION_TTL_SECONDS });
@@ -96,10 +98,26 @@ export const createLoginHandler = ({ verifyIdToken, User, redis, logger = consol
     }
 };
 
-export const createLogoutHandler = ({ redis, logger = console.info }) => async (req, res) => {
+export const createLogoutHandler = ({ redis, User, logger = console.info }) => async (req, res) => {
     const sessionId = getSessionId(req.cookies);
     try {
-        if (sessionId) await redis.del(`session:${sessionId}`);
+        if (sessionId) {
+            const sessionKey = `session:${sessionId}`;
+            const sessionRaw = typeof redis.get === "function" ? await redis.get(sessionKey) : null;
+            if (sessionRaw && User) {
+                const session = JSON.parse(sessionRaw);
+                // One-time recovery for sessions created before coin balances
+                // and history were persisted to MongoDB.
+                if (session.coinPersistenceVersion !== 1 && session.userId) {
+                    await User.findByIdAndUpdate(session.userId, {
+                        interviewCoin: Number(session.interviewCoin) || 0,
+                        coinHistory: session.coinHistory || [],
+                        coinLedgerInitialized: true,
+                    });
+                }
+            }
+            await redis.del(sessionKey);
+        }
         const cookieOptions = getSessionCookieOptions(req);
         res.clearCookie(SESSION_COOKIE_NAME, cookieOptions);
         res.clearCookie(LEGACY_SESSION_COOKIE_NAME, cookieOptions);

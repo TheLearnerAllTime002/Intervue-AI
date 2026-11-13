@@ -19,6 +19,6 @@ export const spendCoins = async (data)=>{
 }
 
 export const getCoinHistory = async () => {
-    const response = await api.get("/api/auth/coin-history")
+    const response = await api.get("/api/billing/history")
     return response.data
 }

@@ -8,7 +8,7 @@ import api from '../utils/axios'
 import { useSelector } from 'react-redux'
 import { useEffect } from 'react'
 import RoadmapResult from '../components/roadmap/RoadmapResult'
-import { ListSkeleton, Skeleton, useDelayedLoading } from '../components/Skeleton'
+import { DelayedSkeleton, ListSkeleton, Skeleton } from '../components/Skeleton'
 const PACKAGE_OPTIONS = ["10 LPA", "15 LPA", "20 LPA", "30 LPA", "40 LPA"];
 function Roadmap({ user, setUser }) {
     const navigate = useNavigate()
@@ -22,7 +22,6 @@ function Roadmap({ user, setUser }) {
     const [historyLoading, setHistoryLoading] = useState(false);
     const [history, setHistory] = useState([]);
     const [error, setError] = useState("");
-    const showRoadmapSkeleton = useDelayedLoading(loading)
 
     const { resume } = useSelector((state) => state.resume)
 
@@ -157,7 +156,7 @@ function Roadmap({ user, setUser }) {
 
 
                     </AnimatePresence>
-                    {loading && showRoadmapSkeleton && <section aria-label="Generating roadmap" aria-busy="true" className="mx-auto mt-6 max-w-3xl space-y-4 border-2 border-black bg-white p-5 shadow-[4px_4px_0_#171717] sm:p-7"><Skeleton className="h-6 w-2/3" /><Skeleton className="h-4 w-full" /><div className="grid gap-3 sm:grid-cols-3"><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /></div><Skeleton className="h-4 w-4/5" /></section>}
+                    <DelayedSkeleton active={loading}><section aria-label="Generating roadmap" aria-busy="true" className="mx-auto mt-6 max-w-3xl space-y-4 border-2 border-black bg-white p-5 shadow-[4px_4px_0_#171717] sm:p-7"><Skeleton className="h-6 w-2/3" /><Skeleton className="h-4 w-full" /><div className="grid gap-3 sm:grid-cols-3"><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /></div><Skeleton className="h-4 w-4/5" /></section></DelayedSkeleton>
                 </div>
 
             </main>

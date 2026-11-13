@@ -18,7 +18,7 @@ import QuestionBanks from './pages/QuestionBanks'
 import CoverLetter from './pages/CoverLetter'
 import { getRedirectResult, onAuthStateChanged } from 'firebase/auth'
 import { auth } from './utils/firebase'
-import { restoreBackendSession } from './apis/user.api'
+import { getCoinHistory, restoreBackendSession } from './apis/user.api'
 import { PageSkeleton } from './components/Skeleton'
 
 function App() {
@@ -27,6 +27,7 @@ function App() {
   const [authError, setAuthError] = useState(null)
   const [retryingSession, setRetryingSession] = useState(false)
   const dispatch = useDispatch()
+  const coinUserId = user?.userId || user?._id
 
   useEffect(() => {
     let active = true
@@ -119,6 +120,21 @@ function App() {
     getResumeData()
     return () => { active = false }
   }, [dispatch, loading, user])
+
+  useEffect(() => {
+    if (loading || !coinUserId) return undefined
+    let active = true
+    getCoinHistory().then((result) => {
+      if (!active || !Number.isFinite(Number(result?.interviewCoin))) return
+      setUser((currentUser) => {
+        if (!currentUser || Number(currentUser.interviewCoin) === Number(result.interviewCoin)) return currentUser
+        return { ...currentUser, interviewCoin: Number(result.interviewCoin) }
+      })
+    }).catch((error) => {
+      console.error("Could not restore the coin balance:", error.response?.status || error.code || "network error")
+    })
+    return () => { active = false }
+  }, [loading, coinUserId])
 
 
   if(loading){
