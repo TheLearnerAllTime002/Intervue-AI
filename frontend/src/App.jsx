@@ -14,6 +14,7 @@ import Roadmap from './pages/Roadmap'
 import Billing from './pages/Billing'
 import Applications from './pages/Applications'
 import Contact from './pages/Contact'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 import QuestionBanks from './pages/QuestionBanks'
 import CoverLetter from './pages/CoverLetter'
 import { getRedirectResult, onAuthStateChanged } from 'firebase/auth'
@@ -164,6 +165,7 @@ function App() {
       }/>
 
     <Route path='/contact' element={<Contact/>}/>
+    <Route path='/privacy-policy' element={<PrivacyPolicy/>}/>
 
     <Route path='/dashboard' element={
       user ? <Dashboard user={user} setUser={setUser}/> 
