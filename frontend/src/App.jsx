@@ -16,7 +16,7 @@ import Applications from './pages/Applications'
 import Contact from './pages/Contact'
 import QuestionBanks from './pages/QuestionBanks'
 import CoverLetter from './pages/CoverLetter'
-import { onAuthStateChanged } from 'firebase/auth'
+import { getRedirectResult, onAuthStateChanged } from 'firebase/auth'
 import { auth } from './utils/firebase'
 import { restoreBackendSession } from './apis/user.api'
 
@@ -67,6 +67,14 @@ function App() {
     }, (error) => {
       console.error("Firebase auth state listener failed:", error.code || "unknown")
       if (active) {
+        setAuthError(error)
+        setLoading(false)
+      }
+    })
+
+    getRedirectResult(auth).catch((error) => {
+      if (active) {
+        console.error("Firebase redirect sign-in failed:", error)
         setAuthError(error)
         setLoading(false)
       }
