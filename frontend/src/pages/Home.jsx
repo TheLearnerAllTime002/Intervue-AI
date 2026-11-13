@@ -136,19 +136,19 @@ function Home({ setUser }) {
                     </motion.div>
 
                     <div className='relative grid gap-5 md:grid-cols-3'>
-                        <svg aria-hidden='true' className='pointer-events-none absolute left-[16%] right-[16%] top-7 hidden h-24 w-[68%] overflow-visible md:block' viewBox='0 0 800 100' fill='none' preserveAspectRatio='none'>
-                            <motion.path d='M5 50 C 150 0, 245 100, 400 50 S 650 0, 795 50' stroke='#171717' strokeWidth='4' strokeLinecap='round' strokeDasharray='10 12' initial={{ pathLength: 0, opacity: 0 }} whileInView={{ pathLength: 1, opacity: 1 }} viewport={{ once: true, amount: 0.6 }} transition={{ duration: 2, ease: 'easeInOut' }} />
-                            <motion.circle r='10' fill='#ffe15a' stroke='#171717' strokeWidth='4' initial={{ cx: 5, cy: 50 }} whileInView={{ cx: 795, cy: 50 }} viewport={{ once: true, amount: 0.6 }} transition={{ duration: 2.5, ease: 'easeInOut', delay: 0.1 }} />
+                        <svg aria-hidden='true' className='pointer-events-none absolute left-[16%] right-[16%] top-11 hidden h-16 w-[68%] overflow-visible md:block' viewBox='0 0 800 80' fill='none' preserveAspectRatio='none'>
+                            <motion.path d='M5 40 C 150 5, 245 75, 400 40 S 650 5, 795 40' stroke='#171717' strokeWidth='3' strokeDasharray='8 10' initial={{ pathLength: 0, opacity: 0 }} whileInView={{ pathLength: 1, opacity: 1 }} viewport={{ once: true, amount: 0.6 }} transition={{ duration: 1.4, ease: 'easeInOut' }} />
+                            <motion.circle r='7' fill='#8bd8ff' stroke='#171717' strokeWidth='3' initial={{ cx: 5, cy: 40 }} whileInView={{ cx: 795, cy: 40 }} viewport={{ once: true, amount: 0.6 }} transition={{ duration: 2.2, ease: 'easeInOut', delay: 0.15 }} />
                         </svg>
                         {prepSteps.map((step, index) => (
                             <motion.article
                                 key={step.number}
-                                initial={{ opacity: 0, x: index === 0 ? -110 : index === 2 ? 110 : 0, y: index === 1 ? 90 : 30, rotate: index === 0 ? -8 : index === 2 ? 8 : 0, scale: 0.88 }}
-                                whileInView={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }}
-                                viewport={{ once: true, amount: 0.45 }}
-                                transition={{ type: 'spring', stiffness: 85, damping: 14, delay: index * 0.18 }}
-                                className={`relative z-10 border-2 border-black p-6 shadow-[7px_7px_0_#171717] ${index === 1 ? 'bg-sky-200' : 'bg-white'}`}>
-                                <motion.div initial={{ rotate: -25, scale: 0.5 }} whileInView={{ rotate: 0, scale: 1 }} viewport={{ once: true, amount: 0.45 }} transition={{ type: 'spring', stiffness: 180, damping: 10, delay: index * 0.18 + 0.2 }} className='mb-6 flex h-12 w-12 items-center justify-center border-2 border-black bg-yellow-300 font-mono text-sm font-black shadow-[3px_3px_0_#171717]'>{step.number}</motion.div>
+                                initial={{ opacity: 0, y: 34 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, amount: 0.3 }}
+                                transition={{ duration: 0.5, delay: index * 0.15 }}
+                                className={`relative z-10 border-2 border-black p-6 shadow-[5px_5px_0_#171717] ${index === 1 ? 'bg-sky-200' : 'bg-white'}`}>
+                                <div className='mb-6 flex h-12 w-12 items-center justify-center border-2 border-black bg-yellow-300 font-mono text-sm font-black shadow-[3px_3px_0_#171717]'>{step.number}</div>
                                 <h3 className='mb-2 font-serif text-xl font-black tracking-tight text-black'>{step.title}</h3>
                                 <p className='text-sm font-medium leading-6 text-sky-950'>{step.description}</p>
                             </motion.article>

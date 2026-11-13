@@ -31,10 +31,13 @@ export const createQuestionBank = async (req, res) => {
 export const addBankQuestion = async (req, res) => {
   const userId = req.headers["x-user-id"];
   const { id } = req.params;
-  const { question, sourceInterviewId } = req.body ?? {};
+  const { question, answer = "", sourceInterviewId } = req.body ?? {};
   if (!mongoose.isValidObjectId(id)) return res.status(400).json({ success: false, message: "Invalid question bank." });
   if (typeof question !== "string" || question.trim().length < 5 || question.length > 2000) {
     return res.status(400).json({ success: false, message: "Question must be 5 to 2,000 characters." });
+  }
+  if (typeof answer !== "string" || answer.length > 10000) {
+    return res.status(400).json({ success: false, message: "Answer must be 10,000 characters or fewer." });
   }
   const bank = await QuestionBank.findOne({ _id: id, userId });
   if (!bank) return res.status(404).json({ success: false, message: "Question bank not found." });
@@ -45,6 +48,7 @@ export const addBankQuestion = async (req, res) => {
   }
   bank.questions.push({
     question: question.trim(),
+    answer: answer.trim(),
     sourceInterviewId: mongoose.isValidObjectId(sourceInterviewId) ? sourceInterviewId : null,
   });
   await bank.save();

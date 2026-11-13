@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const bankQuestionSchema = new mongoose.Schema({
   question: { type: String, required: true, trim: true, maxlength: 2000 },
+  answer: { type: String, default: "", trim: true, maxlength: 10000 },
   sourceInterviewId: { type: mongoose.Schema.Types.ObjectId, default: null },
 }, { timestamps: true });
 

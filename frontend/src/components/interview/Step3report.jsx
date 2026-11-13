@@ -22,7 +22,7 @@ function Step3report({ report, user, setUser }) {
     if (!selectedBankId || savedQuestions[index] === "saving") return
     setSavedQuestions((current) => ({ ...current, [index]: "saving" }))
     try {
-      const result = await addBankQuestion(selectedBankId, { question: item.question, sourceInterviewId: report._id })
+      const result = await addBankQuestion(selectedBankId, { question: item.question, answer: item.userAnswer || "", sourceInterviewId: report._id })
       setBanks((current) => current.map((bank) => bank._id === selectedBankId ? result.bank : bank))
       setSavedQuestions((current) => ({ ...current, [index]: "saved" }))
     } catch (error) {
