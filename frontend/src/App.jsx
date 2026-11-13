@@ -19,6 +19,7 @@ import CoverLetter from './pages/CoverLetter'
 import { getRedirectResult, onAuthStateChanged } from 'firebase/auth'
 import { auth } from './utils/firebase'
 import { restoreBackendSession } from './apis/user.api'
+import { PageSkeleton } from './components/Skeleton'
 
 function App() {
   const [user,setUser]= useState(null)
@@ -121,11 +122,7 @@ function App() {
 
 
   if(loading){
-    return(
-      <div className="fixed top-0 left-0 w-full z-[9999]">
-        <div className="h-1 bg-black animate-pulse w-full" />
-      </div>
-    )
+    return <PageSkeleton />
   }
 
   if (authError && !user) {

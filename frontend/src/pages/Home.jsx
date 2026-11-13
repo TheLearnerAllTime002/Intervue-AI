@@ -40,15 +40,17 @@ function Home({ setUser }) {
             </motion.nav>
 
             {/* main area */}
-            <section className='relative pt-20 pb-14 overflow-hidden bg-[#F8F9FA]'>
-                <div className='absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-black/[0.04] blur-[90px] pointer-events-none' />
-
-                <div className='max-w-4xl mx-auto px-6 text-center'>
+            <section className='relative isolate overflow-hidden bg-[#F8F9FA] px-5 pb-14 pt-28 sm:px-8 sm:pb-20 sm:pt-32'>
+                <div className='pointer-events-none absolute -right-32 -top-32 h-[520px] w-[520px] rounded-full bg-sky-200/60 blur-[100px]' />
+                <div className='pointer-events-none absolute -bottom-52 -left-40 h-[460px] w-[460px] rounded-full bg-yellow-200/70 blur-[100px]' />
+                <div className='relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-10'>
+                <div className='max-w-2xl text-center lg:text-left'>
                     <motion.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.05 }}
-                        className='inline-flex items-center border-2 border-black bg-sky-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-950 shadow-[3px_3px_0_#171717] mb-5'>
+                        className='mb-6 inline-flex items-center gap-2 border-2 border-black bg-sky-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-950 shadow-[3px_3px_0_#171717]'>
+                        <span className='h-2 w-2 rounded-full bg-sky-700' />
                         Multi-Agent Interview Platform
 
                     </motion.div>
@@ -57,21 +59,18 @@ function Home({ setUser }) {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.55, delay: 0.12 }}
-                        className='font-serif text-4xl md:text-6xl font-black leading-[1.02] tracking-[-0.04em] mb-5 text-black'>
-                        Job Interviews<br />
-                        <span className="text-sky-950">
-                            Don't Have to Suck
-                        </span><br />
-                        <span className='inline-block mt-2 border-2 border-black bg-yellow-300 px-3 py-1 text-black shadow-[4px_4px_0_#171717]'>Anymore!</span>
+                        className='mb-5 font-serif text-5xl font-black leading-[0.98] tracking-[-0.055em] text-black sm:text-6xl md:text-7xl'>
+                        Interview prep,<br />
+                        <span className='text-sky-950'>without the</span><br />
+                        <span className='mt-2 inline-block -rotate-1 border-2 border-black bg-yellow-300 px-3 py-1.5 text-black shadow-[5px_5px_0_#171717]'>guesswork.</span>
                     </motion.h1>
 
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.55, delay: 0.2 }}
-                        className='mx-auto mb-7 max-w-lg font-sans text-sm sm:text-base font-medium leading-7 text-sky-950'>
-                        Intervue AI is an AI-powered interview preparation platform
-                        designed to help job seekers excel in their interviews.
+                        className='mx-auto mb-7 max-w-lg font-sans text-sm font-medium leading-7 text-sky-950 sm:text-base lg:mx-0'>
+                        Practice with realistic AI interviews, get clear feedback, and build a plan for the role you want, all in one place.
                     </motion.p>
 
                     <motion.div
@@ -83,23 +82,34 @@ function Home({ setUser }) {
                             onClick={() => setShowLogin(true)}
                             whileHover={{ scale: 1.05, boxShadow: "0 0 36px rgba(0,0,0,0.18)" }}
                             whileTap={{ scale: 0.97 }}
-                            className='relative  gap-2 overflow-hidden bg-[#0A0A0A]/80 backdrop-blur-2xl text-white font-bold px-5 py-2.5 rounded-lg text-xs cursor-pointer border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all hover:border-white/20'>
+                            className='relative gap-2 overflow-hidden bg-[#0A0A0A]/80 px-5 py-3 text-sm font-bold text-white cursor-pointer border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all hover:border-white/20'>
                             <span className='flex items-center justify-center gap-2'> Get Started For Free <FaArrowRight /></span>
                             <span className='absolute inset-0 bg-gradient-to-br from-white/[0.1] via-transparent to-transparent pointer-events-none rounded-lg' />
                         </motion.button>
                     </motion.div>
+                    <div className='mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-bold text-black/60 lg:justify-start'>
+                        <span className='flex items-center gap-1.5'><FiMic className='text-sky-800' /> Realistic practice</span>
+                        <span className='flex items-center gap-1.5'><FiBarChart2 className='text-sky-800' /> Actionable feedback</span>
+                        <span className='flex items-center gap-1.5'><FiMap className='text-sky-800' /> Personal roadmap</span>
+                    </div>
                 </div>
 
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ y: -10, scale: 1.02 }}
+                    whileHover={{ y: -6 }}
                     transition={{ duration: 0.7, delay: 0.3 }}
-                    className='mt-10 rounded-lg overflow-hidden  shadow-[0_0_60px_rgba(0,0,0,0.06)] max-w-2xl mx-auto'>
+                    className='relative mx-auto w-full max-w-2xl lg:mt-2'>
 
-                    <img src={dashboard} alt='dashboard img' className='w-full h-auto object-cover block ' />
+                    <div className='absolute -inset-3 rotate-2 border-2 border-black bg-sky-200 shadow-[6px_6px_0_#171717]' />
+                    <div className='relative overflow-hidden border-2 border-black bg-white p-2 shadow-[8px_8px_0_#171717] sm:p-3'>
+                        <div className='mb-2 flex items-center gap-1.5 px-1'><span className='h-2.5 w-2.5 rounded-full bg-rose-400' /><span className='h-2.5 w-2.5 rounded-full bg-yellow-400' /><span className='h-2.5 w-2.5 rounded-full bg-green-400' /><span className='ml-2 text-[9px] font-bold tracking-wide text-black/45'>YOUR INTERVIEW WORKSPACE</span></div>
+                        <img src={dashboard} alt='Intervue AI dashboard showing interview preparation progress' className='block h-auto w-full object-cover' />
+                    </div>
+                    <div className='absolute -bottom-5 -left-3 border-2 border-black bg-yellow-300 px-3 py-2 text-[10px] font-black shadow-[3px_3px_0_#171717] sm:-left-7 sm:text-xs'>Your next interview, handled.</div>
 
                 </motion.div>
+                </div>
 
             </section>
 

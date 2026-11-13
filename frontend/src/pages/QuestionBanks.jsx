@@ -6,6 +6,7 @@ import { addBankQuestion, createQuestionBank, deleteBankQuestion, deleteQuestion
 import api from "../utils/axios"
 import { signOut } from "firebase/auth"
 import { auth } from "../utils/firebase"
+import { ListSkeleton } from "../components/Skeleton"
 
 function QuestionBanks({ user, setUser }) {
   const [banks, setBanks] = useState([])
@@ -109,7 +110,7 @@ function QuestionBanks({ user, setUser }) {
           </form>
 
           {error && <p role="alert" className="mt-4 border-2 border-black bg-red-100 p-3 text-sm font-bold text-red-950">{error}</p>}
-          {loading ? <p className="mt-6 text-sm font-bold">Loading your banks...</p> : banks.length === 0 ? (
+          {loading ? <ListSkeleton count={3} /> : banks.length === 0 ? (
             <div className="mt-6 border-2 border-black bg-yellow-100 p-5"><FiBookmark /><p className="mt-2 text-sm font-extrabold">No question banks yet.</p><p className="mt-1 text-xs">Create one above, then add custom questions or save questions from an interview report.</p></div>
           ) : (
             <div className="mt-6 space-y-4">

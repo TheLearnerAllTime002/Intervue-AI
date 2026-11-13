@@ -8,6 +8,7 @@ import api from '../utils/axios'
 import { useSelector } from 'react-redux'
 import { useEffect } from 'react'
 import RoadmapResult from '../components/roadmap/RoadmapResult'
+import { ListSkeleton } from '../components/Skeleton'
 const PACKAGE_OPTIONS = ["10 LPA", "15 LPA", "20 LPA", "30 LPA", "40 LPA"];
 function Roadmap({ user, setUser }) {
     const navigate = useNavigate()
@@ -296,7 +297,7 @@ function Roadmap({ user, setUser }) {
 
                                 <div className='flex flex-col gap-2 p-3'>
                                     {historyLoading ? (
-                                        <p className="text-xs text-black/35 text-center py-6">Loading…</p>
+                                        <ListSkeleton count={2} />
                                     )
                                         : history.length === 0 ?
                                             (

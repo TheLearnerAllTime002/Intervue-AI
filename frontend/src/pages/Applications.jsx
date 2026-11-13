@@ -3,6 +3,7 @@ import { FiBriefcase, FiCalendar, FiExternalLink, FiPlus, FiTrash2 } from "react
 import { motion } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/axios";
+import { ListSkeleton } from "../components/Skeleton";
 
 const STAGES = [
   { value: "saved", label: "Saved" },
@@ -139,7 +140,7 @@ function Applications() {
             </div>
 
             {error && <p role="alert" className="border-2 border-black bg-red-100 p-3 text-sm font-bold text-red-950">{error}</p>}
-            {loading ? <p className="border-2 border-black bg-white p-6 text-sm font-bold text-black/65">Loading your applications...</p> : applications.length === 0 ? (
+            {loading ? <ListSkeleton count={3} /> : applications.length === 0 ? (
               <div className="border-2 border-dashed border-black bg-white p-8 text-center shadow-[3px_3px_0_#171717]"><FiBriefcase className="mx-auto mb-3 text-sky-900" size={24} /><p className="font-black">No applications saved yet</p><p className="mt-1 text-xs font-semibold text-black/60">Add a role to start tracking your job search.</p></div>
             ) : applications.map((application) => {
               const jobUrl = safeJobUrl(application.jobUrl || "");

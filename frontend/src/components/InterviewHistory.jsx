@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { FiArrowUpRight, FiClock, FiFileText, FiTrash2 } from 'react-icons/fi'
+import { ListSkeleton } from './Skeleton'
 
 const formatDate = (value) => {
   if (!value) return 'Date unavailable'
@@ -26,7 +27,7 @@ function InterviewHistory({ interviews = [], loading = false, onOpenInterview, o
       </div>
 
       {loading ? (
-        <div className='neo-blue-surface rounded-lg border-2 border-black p-5 text-sm font-bold text-sky-950'>Loading saved attempts...</div>
+        <ListSkeleton count={3} />
       ) : ordered.length === 0 ? (
         <div className='neo-yellow-surface rounded-lg border-2 border-black p-5 sm:p-6'>
           <p className='text-sm font-extrabold'>No attempts saved yet.</p>

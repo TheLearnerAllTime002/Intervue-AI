@@ -1,6 +1,7 @@
 import React from 'react'
 import { FiTrendingDown, FiTrendingUp } from 'react-icons/fi'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Skeleton } from './Skeleton'
 
 const dateLabel = (value) => {
   const date = new Date(value)
@@ -52,7 +53,11 @@ function InterviewProgress({ interviews = [], loading = false }) {
 
       <div className='neo-blue-surface rounded-lg p-3 sm:p-5'>
         {loading ? (
-          <div className='flex min-h-48 items-center justify-center text-sm font-bold text-sky-950'>Loading score history...</div>
+          <div aria-busy='true' className='min-h-48 space-y-4 p-2'>
+            <Skeleton className='h-4 w-40' />
+            <Skeleton className='h-32 w-full' />
+            <div className='flex gap-3'><Skeleton className='h-3 w-16' /><Skeleton className='h-3 w-16' /><Skeleton className='h-3 w-16' /></div>
+          </div>
         ) : attempts.length < 1 ? (
           <div className='flex min-h-48 flex-col items-center justify-center px-4 text-center'>
             <p className='text-base font-black text-sky-950'>Your score trend will appear here.</p>

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from "motion/react"
-import { FiArrowDownLeft, FiArrowLeft, FiArrowUpRight, FiCheckCircle, FiClock, FiLock } from 'react-icons/fi'
+import { FiArrowDownLeft, FiArrowLeft, FiArrowUpRight, FiCheckCircle, FiLock } from 'react-icons/fi'
 import { GiTwoCoins } from 'react-icons/gi'
 import PricingCard from '../components/PricingCard'
 import api from '../utils/axios'
 import { useNavigate } from 'react-router-dom'
 import { getCoinHistory } from '../apis/user.api'
+import { ListSkeleton } from '../components/Skeleton'
 
 const plans = [
     {
@@ -163,7 +164,7 @@ function Billing({ user, setUser }) {
                     </div>
                     {historyError && <p role='alert' className='mb-3 border-2 border-black bg-red-100 p-3 text-xs font-bold text-red-950'>{historyError}</p>}
                     {historyLoading ? (
-                        <div className='flex items-center gap-2 border-2 border-black bg-white p-4 text-xs font-bold text-sky-950'><FiClock className='animate-pulse' /> Loading coin activity...</div>
+                        <ListSkeleton count={2} />
                     ) : coinHistory.length === 0 ? (
                         <div className='border-2 border-dashed border-black bg-white p-5 text-center'>
                             <GiTwoCoins className='mx-auto mb-2 text-sky-900' size={24} />
