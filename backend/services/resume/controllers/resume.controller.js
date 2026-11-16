@@ -231,6 +231,7 @@ export const matchResumeToJob = async (req, res) => {
 };
 
 export const generateCoverLetter = async (req, res) => {
+    let stage = "validating the request"
     try {
         const userId = req.headers["x-user-id"]
         const { jobDescription, company = "", role = "", tone = "professional", length = "standard", resumeText: rawResumeText = "" } = req.body ?? {}
@@ -251,6 +252,7 @@ export const generateCoverLetter = async (req, res) => {
         if (typeof rawResumeText === "string" && rawResumeText.trim().length >= 40) {
             resumeText = rawResumeText.trim().slice(0, 14000)
         } else {
+            stage = "loading the saved resume"
             const resume = await Resume.findOne({ userId }).select("extractedText")
             if (!resume?.extractedText) {
                 return res.status(404).json({ success: false, message: "No resume found. Upload a resume or paste your resume text." })
@@ -258,6 +260,7 @@ export const generateCoverLetter = async (req, res) => {
             resumeText = resume.extractedText
         }
 
+        stage = "generating the cover letter"
         const result = await coverLetterAgent({
             resumeText,
             jobDescription: jobDescription.trim(),
@@ -268,6 +271,7 @@ export const generateCoverLetter = async (req, res) => {
         })
 
         // Save to history (keep last 20, newest first)
+        stage = "saving cover-letter history"
         const historyEntry = {
             coverLetter: result.coverLetter,
             subject: result.subject,
@@ -285,8 +289,25 @@ export const generateCoverLetter = async (req, res) => {
 
         return res.status(200).json({ success: true, data: result })
     } catch (error) {
-        console.error("Cover letter generation failed:", error.message)
-        return res.status(500).json({ success: false, message: "Could not generate the cover letter right now. Please try again." })
+        const providerStatus = error.status ?? error.response?.status ?? error.cause?.status ?? error.cause?.response?.status
+        console.error("Cover letter request failed:", {
+            stage,
+            errorName: error.name,
+            errorCode: error.code,
+            providerStatus,
+            message: error.message,
+        })
+
+        if (stage === "generating the cover letter") {
+            const message = providerStatus === 429
+                ? "The AI writer is temporarily rate-limited. Please wait a moment and try again."
+                : providerStatus === 401 || providerStatus === 403
+                    ? "The AI writer is not authorized. Check GROQ_API_KEY in the resume service environment."
+                    : "The AI writer could not complete this request. Check the resume service logs and try again."
+            return res.status(502).json({ success: false, message })
+        }
+
+        return res.status(500).json({ success: false, message: "Could not finish the cover-letter request. Check the resume service logs and try again." })
     }
 }
 
