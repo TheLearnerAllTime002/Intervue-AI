@@ -28,6 +28,7 @@ function LoginModel({ onClose, setUser }) {
             if (!backendUser?.userId && !backendUser?._id) {
                 throw new Error('Backend session verification failed.')
             }
+            sessionStorage.setItem('intervue:welcome-toast', backendUser.name || backendUser.email?.split('@')[0] || 'there')
             setUser(backendUser)
             onClose()
         } catch (error) {

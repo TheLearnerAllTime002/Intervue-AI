@@ -33,6 +33,9 @@ The project is created by **Arjun Mitra** ([`@TheLearnerAllTime002`](https://git
 | **Cover letters** | Draft role-specific cover letters from your career details. |
 | **Learning roadmaps** | Turn a target role and skill gaps into a learning plan with suggested resources. |
 | **Progress dashboard** | Review interview history, scores, streaks, weekly goals, and skill trends. |
+| **Product tour** | Get a guided first look at the dashboard and career preparation tools, with the option to end or restart the tour. |
+| **AI and career news** | Browse recent AI, hiring, and skills stories from the dashboard, with links to their original publishers. |
+| **Welcome notification** | See a brief personalized welcome after signing in. |
 | **Job applications** | Keep application details, stages, deadlines, and notes together. |
 | **Coins and billing** | Manage interview credits and purchase additional credits through Razorpay. |
 | **Installable app** | Use the Progressive Web App shell on supported browsers. The offline shell does not make API data or sign-in available offline. |
@@ -51,6 +54,7 @@ flowchart LR
     GW -->|learning plans| ROADMAP[Roadmap service]
     GW -->|credits and payments| BILLING[Billing service]
     GW -->|contact form| EMAIL[EmailJS]
+    GW -->|career news| NEWS[NewsAPI]
     AUTH --> MDB[(MongoDB)]
     RESUME --> MDB
     INTERVIEW --> MDB
@@ -71,12 +75,14 @@ flowchart LR
 
 | Service | Default port | Responsibilities |
 | --- | ---: | --- |
-| **Gateway** | `8000` | Public API entry point, CORS, request IDs, authentication middleware, downstream proxying, and contact form endpoint. |
+| **Gateway** | `8000` | Public API entry point, CORS, request IDs, authentication middleware, downstream proxying, contact form endpoint, and cached career-news feed. |
 | **Auth** | `8001` | Verifies Firebase sign-in, creates and validates application sessions, and manages user identity. |
 | **Resume** | `8002` | Resume data and generation/scoring flows, cover letter content, and job application records. |
 | **Interview** | `8003` | Interview creation, question and answer flow, feedback and summaries, interview history, and personal question banks. |
 | **Roadmap** | `8004` | AI-generated learning plans and suggested learning resources. |
 | **Billing** | `8005` | Coin balance and Razorpay order/payment workflows. |
+
+The dashboard career-news endpoint is authenticated and fetches article metadata from NewsAPI on the server. Results are cached briefly to reduce provider requests. The dashboard shows a compact set of stories by default and links to each publisher for the full article. Configure a NewsAPI key on the Gateway; do not put it in a `VITE_` variable or frontend code. Review [NewsAPI plans](https://newsapi.org/pricing) for development and production use requirements.
 
 **Shared infrastructure:** MongoDB stores service data. Redis supports session coordination between Gateway, Auth, and Billing. In the local Docker Compose setup MongoDB is exposed at `127.0.0.1:27017` and Redis at `127.0.0.1:6380`.
 
@@ -109,7 +115,7 @@ The services use `INTERNAL_SERVICE_SECRET` to protect trusted service-to-service
 - Docker Desktop with Docker Compose
 - Firebase project and web API key
 - Groq API key for AI-backed services
-- Optional provider credentials for Razorpay, YouTube Data API, and EmailJS
+- Optional provider credentials for Razorpay, YouTube Data API, EmailJS, and NewsAPI
 
 ### 1. Install dependencies
 
@@ -139,7 +145,7 @@ Important settings:
 | File | Settings to provide |
 | --- | --- |
 | `frontend/.env` | `VITE_FIREBASE_API_KEY`; optionally `VITE_BACKEND_URL` and `VITE_RAZORPAY_KEY_ID` |
-| `backend/gateway/.env` | service URLs, `FRONTEND_URL`, Redis URL, internal secret, and EmailJS keys |
+| `backend/gateway/.env` | service URLs, `FRONTEND_URL`, Redis URL, internal secret, EmailJS keys, and `NEWS_API_KEY` for dashboard career news |
 | `backend/services/auth/.env` | MongoDB URL, Redis URL, internal secret, and Firebase Admin credentials |
 | `backend/services/resume/.env` | MongoDB URL, Groq API key, internal secret |
 | `backend/services/interview/.env` | MongoDB URL, Groq API key, internal secret |
@@ -171,6 +177,7 @@ The frontend defaults to `http://localhost:5173`; the API Gateway defaults to `h
 - Keep API keys and secrets in environment variables. Never commit `.env` files or Firebase service-account credentials.
 - Set a long, random `INTERNAL_SERVICE_SECRET`; use the same value across Gateway and protected services.
 - In production, configure `FRONTEND_URL` and all service URLs on Gateway.
+- Set `NEWS_API_KEY` in the Gateway deployment environment to enable the dashboard news feed. Keep it server-side and never expose it through the frontend build.
 - Gateway, Auth, and Billing must point to the same Redis endpoint, including its database index.
 - The checked-in root `vercel.json` configures the repository-root frontend deployment. Set `VITE_FIREBASE_API_KEY` in the Vercel project environment. `frontend/vercel.json` applies when Vercel's Root Directory is set to `frontend`.
 - Backend service-specific variables are documented in each service's `.env.example`. Review `backend/LOCAL_DEV.md` for additional local and production authentication configuration.

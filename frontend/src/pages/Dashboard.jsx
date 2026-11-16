@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar'
 import { useNavigate } from 'react-router-dom'
 import api from '../utils/axios'
 import { motion } from "motion/react"
-import { FiSidebar } from 'react-icons/fi'
+import { FiSidebar, FiArrowUpRight, FiCheckCircle } from 'react-icons/fi'
 import { useEffect } from 'react'
 import { deleteInterview, getAllInterviews } from '../apis/interview.api'
 import { signOut } from 'firebase/auth'
@@ -17,7 +17,13 @@ import SkillRadarChart from '../components/SkillRadarChart'
 import WeeklyGoal from '../components/WeeklyGoal'
 import ProductTour from '../components/ProductTour'
 import CareerNews from '../components/CareerNews'
+import { AnimatePresence } from 'motion/react'
 function Dashboard({ user, setUser }) {
+  const [welcomeName, setWelcomeName] = useState(() => {
+    const name = sessionStorage.getItem('intervue:welcome-toast')
+    if (name) sessionStorage.removeItem('intervue:welcome-toast')
+    return name
+  })
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [moblieOpen, setMoblieOpen] = useState(false)
   const [stats, setStats] = useState({
@@ -44,6 +50,12 @@ function Dashboard({ user, setUser }) {
   const [loadingInterviews, setLoadingInterviews] = useState(true)
 
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!welcomeName) return undefined
+    const timer = window.setTimeout(() => setWelcomeName(null), 4200)
+    return () => window.clearTimeout(timer)
+  }, [welcomeName])
 
   const fetchInterviews = useCallback(async () => {
       setLoadingInterviews(true)
@@ -95,7 +107,7 @@ function Dashboard({ user, setUser }) {
 
 
   return (
-    <div className='bg-white min-h-screen text-[#0A0A0A] font-sans flex'>
+    <div className='bg-[#f6fbff] min-h-screen text-[#0A0A0A] font-sans flex'>
       <Sidebar
         user={user}
         onNewInterview={() => navigate("/interview")}
@@ -107,12 +119,19 @@ function Dashboard({ user, setUser }) {
         onStartTour={() => window.dispatchEvent(new Event("intervue:start-product-tour"))}
       />
       <ProductTour />
+      <AnimatePresence>
+        {welcomeName && <motion.div initial={{ opacity: 0, y: -14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10 }} role="status" className="fixed right-4 top-4 z-[65] flex items-center gap-3 rounded-2xl border-2 border-black bg-yellow-200 px-4 py-3 shadow-[4px_4px_0_#171717] sm:right-6 sm:top-6">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-black bg-sky-200 text-sky-950"><FiCheckCircle size={18} /></span>
+          <span><span className="block text-[10px] font-extrabold uppercase tracking-widest text-black/55">Signed in successfully</span><span className="text-sm font-black">Welcome, {welcomeName}!</span></span>
+        </motion.div>}
+      </AnimatePresence>
 
       <motion.main className={`flex-1 min-h-screen px-3 sm:px-4 md:px-6 py-4 md:py-6 transition-all duration-300 ${sidebarOpen ? "md:ml-[260px]" : "md:ml-[72px]"
         }`}>
 
-        {/* top Area */}
-        <div className='flex items-center justify-between mb-5 md:mb-6'>
+        <section className='relative mb-5 overflow-hidden rounded-3xl border-2 border-black bg-gradient-to-br from-sky-200 via-sky-100 to-yellow-100 p-5 shadow-[5px_5px_0_#171717] md:mb-6 md:p-7'>
+          <div className='pointer-events-none absolute -right-8 -top-14 h-48 w-48 rounded-full border-[24px] border-yellow-200/80' />
+          <div className='relative flex flex-wrap items-center justify-between gap-5'>
           <div className='flex items-center gap-2.5'>
 
             <motion.button
@@ -130,9 +149,10 @@ function Dashboard({ user, setUser }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <p className='inline-block border-2 border-black bg-sky-200 px-2 py-0.5 text-[10px] md:text-xs font-extrabold uppercase tracking-wide mb-1'>Overview</p>
+              <p className='mb-1 inline-flex rounded-full border border-sky-900/20 bg-white/70 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-sky-950'>Your interview workspace</p>
 
-              <h2 className='text-lg md:text-xl font-bold text-[#0A0A0A]'>Hello, {user?.name?.split(" ")[0]} </h2>
+              <h2 className='text-2xl font-black tracking-tight text-[#0A0A0A] md:text-3xl'>Welcome back, {user?.name?.split(" ")[0] || 'there'}!</h2>
+              <p className='mt-1 max-w-xl text-xs font-medium text-sky-950/75 md:text-sm'>Your next opportunity starts with a little practice. Keep your momentum going.</p>
 
 
 
@@ -141,7 +161,9 @@ function Dashboard({ user, setUser }) {
 
 
           </div>
-        </div>
+          <button type="button" onClick={() => navigate('/interview')} className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-yellow-300 px-4 py-3 text-sm font-extrabold shadow-[3px_3px_0_#171717] transition hover:-translate-y-0.5 hover:bg-yellow-200">Start an interview <FiArrowUpRight size={16} /></button>
+          </div>
+        </section>
 
         <div className='h-px bg-black/8 mb-5 md:mb-6' />
 

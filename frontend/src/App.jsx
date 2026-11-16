@@ -87,7 +87,10 @@ function App() {
       }
     })
 
-    getRedirectResult(auth).catch((error) => {
+    getRedirectResult(auth).then((result) => {
+      if (!active || !result?.user) return
+      sessionStorage.setItem('intervue:welcome-toast', result.user.displayName || result.user.email?.split('@')[0] || 'there')
+    }).catch((error) => {
       if (active) {
         console.error("Firebase redirect sign-in failed:", error)
         setAuthError(error)
