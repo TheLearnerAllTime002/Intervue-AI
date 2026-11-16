@@ -22,6 +22,7 @@ import { getRedirectResult, onAuthStateChanged } from 'firebase/auth'
 import { auth } from './utils/firebase'
 import { getCoinHistory, restoreBackendSession } from './apis/user.api'
 import { PageSkeleton } from './components/Skeleton'
+import PwaInstallPrompt from './components/PwaInstallPrompt'
 
 function App() {
   const [user,setUser]= useState(null)
@@ -172,6 +173,7 @@ function App() {
 
   return (
    <>
+   <PwaInstallPrompt />
 
    <Routes>
     <Route path='/' element={
