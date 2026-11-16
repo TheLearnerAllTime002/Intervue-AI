@@ -6,27 +6,27 @@ import { FaCirclePlus } from "react-icons/fa6";
 
 const AGENT_ITEMS = [
     {
-        icon: <FiFileText size={15} />,
+        icon: <FiFileText size={18} />,
         label: "Resume Builder",
         path: "/resume",
     },
     {
-        icon: <FiStar size={15} />,
+        icon: <FiStar size={18} />,
         label: "Resume Scorer",
         path: "/scorer",
     },
     {
-        icon: <FiMap size={15} />,
+        icon: <FiMap size={18} />,
         label: "Roadmap Builder",
         path: "/roadmap",
     },
     {
-        icon: <FiEdit size={15} />,
+        icon: <FiEdit size={18} />,
         label: "Cover Letter",
         path: "/cover-letter",
     },
     {
-        icon: <FiBookmark size={15} />,
+        icon: <FiBookmark size={18} />,
         label: "Question Banks",
         path: "/question-banks",
     },
@@ -34,12 +34,12 @@ const AGENT_ITEMS = [
 
 const WORKSPACE_ITEMS = [
     {
-        icon: <FiBriefcase size={15} />,
+        icon: <FiBriefcase size={18} />,
         label: "Applications",
         path: "/applications",
     },
     {
-        icon: <FiMail size={15} />,
+        icon: <FiMail size={18} />,
         label: "Contact Us",
         path: "/contact",
     },
@@ -127,8 +127,8 @@ function Sidebar({
                     </AnimatePresence>
                 </motion.button>
             </div>
-            <nav className='flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2.5'>
-                <div data-tour="career-tools">
+            <nav className='flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2.5 py-2'>
+                <div data-tour="career-tools" className={sidebarOpen ? "space-y-1.5" : "space-y-1"}>
                 {sidebarOpen && <p className='mx-0.5 mt-2.5 mb-1 inline-flex w-fit items-center border-2 border-black border-l-4 border-l-sky-700 bg-sky-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-sky-950 shadow-[2px_2px_0_#171717]'>Agents</p>}
                 {AGENT_ITEMS.map((nav) => (
                     <motion.button key={nav.path}
@@ -138,7 +138,7 @@ function Sidebar({
                         }}
                         whileHover={{ x: sidebarOpen ? 3 : 0 }}
                         transition={{ duration: 0.13 }}
-                        className={`flex items-center gap-2.5 rounded-lg py-2 transition-all text-xs font-medium text-black/45 hover:text-[#0A0A0A] hover:bg-black/5 cursor-pointer ${sidebarOpen ? "px-2.5 " : "justify-center px-0"
+                        className={`flex w-full items-center gap-3 rounded-xl transition-all font-semibold text-black/60 hover:text-[#0A0A0A] hover:bg-sky-50 cursor-pointer ${sidebarOpen ? "min-h-12 px-3 py-3 text-sm" : "mx-auto h-11 w-11 justify-center px-0 text-xs"
                             }`}>
                         <span className='shrink-0'>{nav.icon}</span>
 
@@ -155,12 +155,12 @@ function Sidebar({
 
                 <div className='my-2 border-t-2 border-black/15' />
                 {sidebarOpen && <p className='mx-0.5 mb-1 inline-flex w-fit items-center border-2 border-black bg-yellow-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-black shadow-[2px_2px_0_#171717]'>Workspace</p>}
-                <div data-tour="workspace-tools">{WORKSPACE_ITEMS.map((nav) => (
+                <div data-tour="workspace-tools" className={sidebarOpen ? "space-y-1.5" : "space-y-1"}>{WORKSPACE_ITEMS.map((nav) => (
                     <motion.button key={nav.path}
                         onClick={() => { navigate(nav.path); setMoblieOpen(false) }}
                         whileHover={{ x: sidebarOpen ? 3 : 0 }}
                         transition={{ duration: 0.13 }}
-                        className={`flex items-center gap-2.5 rounded-lg py-2 transition-all text-xs font-medium text-black/45 hover:text-[#0A0A0A] hover:bg-black/5 cursor-pointer ${sidebarOpen ? "px-2.5 " : "justify-center px-0"}`}>
+                        className={`flex w-full items-center gap-3 rounded-xl transition-all font-semibold text-black/60 hover:text-[#0A0A0A] hover:bg-sky-50 cursor-pointer ${sidebarOpen ? "min-h-12 px-3 py-3 text-sm" : "mx-auto h-11 w-11 justify-center px-0 text-xs"}`}>
                         <span className='shrink-0'>{nav.icon}</span>
                         {sidebarOpen && <span className='whitespace-nowrap'>{nav.label}</span>}
                     </motion.button>
