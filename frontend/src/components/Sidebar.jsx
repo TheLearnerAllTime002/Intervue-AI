@@ -76,20 +76,26 @@ function Sidebar({
                 )}
                 <div className='flex items-center '>
                     <motion.button
+                        type='button'
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setSidebarOpen(!sidebarOpen)}
-                        className='cursor-pointer hidden md:flex text-black/30 hover:text-[#0A0A0A] transition-colors shrink-0'>
-                        <FiSidebar size={15} />
+                        aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                        title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                        className='hidden h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-black/55 transition-colors hover:bg-sky-100 hover:text-[#0A0A0A] md:flex shrink-0'>
+                        <FiSidebar size={20} />
 
                     </motion.button>
 
                     <motion.button
+                        type='button'
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setMoblieOpen(!moblieOpen)}
-                        className='cursor-pointer md:hidden  text-black/30 hover:text-[#0A0A0A] transition-colors shrink-0'>
-                        <FiSidebar size={15} />
+                        aria-label={moblieOpen ? 'Close sidebar' : 'Open sidebar'}
+                        title={moblieOpen ? 'Close sidebar' : 'Open sidebar'}
+                        className='flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-black/55 transition-colors hover:bg-sky-100 hover:text-[#0A0A0A] md:hidden shrink-0'>
+                        <FiSidebar size={20} />
 
                     </motion.button>
                 </div>
@@ -97,14 +103,17 @@ function Sidebar({
             </div>
 
 
-            <div data-tour="create-interview" className='px-2.5 pt-3 pb-1.5 shrink-0'>
+            <div data-tour="create-interview" className='px-2 pt-3 pb-1.5 shrink-0'>
                 <motion.button
+                    type='button'
                     onClick={onNewInterview}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
-                    className={`w-full flex items-center gap-2 bg-[#000000] text-white font-semibold rounded-lg py-2 transition-all shadow-[0_4px_14px_rgba(0,0,0,0.25)] cursor-pointer hover:bg-[#1a1a1a] ${sidebarOpen ? "px-2.5 " : "justify-center px-0"
+                    aria-label='Create a new interview'
+                    title={!sidebarOpen ? 'Create a new interview' : undefined}
+                    className={`flex min-h-12 items-center bg-[#000000] text-white font-bold rounded-xl transition-all shadow-[0_4px_14px_rgba(0,0,0,0.2)] cursor-pointer hover:bg-[#1a1a1a] ${sidebarOpen ? "w-full gap-3 px-3 text-sm" : "mx-auto h-12 w-12 justify-center px-0"
                         }`}>
-                    <FiPlus size={14} className='shrink-0' />
+                    <FiPlus size={sidebarOpen ? 18 : 22} strokeWidth={2.5} className='shrink-0' />
                     <AnimatePresence>
                         {sidebarOpen &&
                             <motion.span

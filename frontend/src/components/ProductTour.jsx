@@ -59,7 +59,6 @@ export default function ProductTour() {
   const step = stepIndex === null ? null : TOUR_STEPS[stepIndex]
 
   return <>
-    <button type="button" onClick={open} className="fixed bottom-4 right-4 z-[60] rounded-full border-2 border-black bg-yellow-300 px-4 py-2 text-xs font-extrabold text-black shadow-[3px_3px_0_#171717] hover:-translate-y-0.5" aria-label="Take the product tour">Product tour</button>
     {step && <div className="fixed inset-0 z-[70]" aria-live="polite">
       <div className="absolute inset-0 bg-black/60" onClick={finish} />
       {targetRect && <div className="pointer-events-none absolute rounded-xl ring-4 ring-yellow-300 ring-offset-4 ring-offset-transparent transition-all" style={{ top: targetRect.top - 5, left: targetRect.left - 5, width: targetRect.width + 10, height: targetRect.height + 10 }} />}
