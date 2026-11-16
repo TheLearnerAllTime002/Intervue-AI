@@ -34,6 +34,9 @@ const navigate = useNavigate()
   const [voiceGender, setVoiceGender] = useState("female");
   const [introSpoken, setIntroSpoken] = useState(false);
   const [speechError, setSpeechError] = useState("");
+  const [cameraError, setCameraError] = useState("");
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [micListening, setMicListening] = useState(false);
 
   // Refs
   const aiVideoRef = useRef(null);
@@ -43,17 +46,26 @@ const navigate = useNavigate()
   const aiPlayingRef = useRef(false);
   const streamRef = useRef(null);
   const submitInFlightRef = useRef(false);
+  const speechRetryBlockedRef = useRef(false);
 
 
   const videoSource = voiceGender === "female" ? femaleVideo : maleVideo
   const progress = ((currentIndex + 1)/(interviewData.totalQuestions))*100
   const showMicon = micOn && !isAIPlaying
 
+  useEffect(() => {
+    if (cameraOn && userVideoRef.current && streamRef.current) {
+      userVideoRef.current.srcObject = streamRef.current
+    }
+  }, [cameraOn])
+
   // Speech recognition
   useEffect(()=>{
     const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition
     if(!SpeechRecognition) {
       setSpeechError("Speech-to-text is not supported in this browser. Use Chrome or Edge.")
+      micOnRef.current = false
+      setMicOn(false)
       return
     }
 
@@ -67,16 +79,39 @@ const navigate = useNavigate()
       setAnswer((previousAnswer) => `${previousAnswer} ${transcript}`.trim())
       setSpeechPreview("")
     }
+    rec.onstart = () => {
+      setMicListening(true)
+      setSpeechError("")
+    }
+    rec.onend = () => {
+      setMicListening(false)
+      // SpeechRecognition stops after silence in some browsers. Restart it while
+      // the user still wants the mic and the interviewer is not speaking.
+      if (micOnRef.current && !aiPlayingRef.current && !speechRetryBlockedRef.current) {
+        window.setTimeout(() => {
+          if (micOnRef.current && !aiPlayingRef.current && !speechRetryBlockedRef.current) startMic()
+        }, 250)
+      }
+    }
     rec.onerror = (e) => {
+      setMicListening(false)
       if (["not-allowed", "service-not-allowed", "audio-capture"].includes(e.error)) {
+        speechRetryBlockedRef.current = true
         micOnRef.current = false
         setMicOn(false)
         setSpeechPreview("")
         setSpeechError(
           e.error === "audio-capture"
             ? "No microphone was found. Connect a microphone and try again."
-            : "Microphone access was denied. Allow microphone access and enable the mic again."
+            : e.error === "service-not-allowed"
+              ? "The browser speech service is unavailable. Try Chrome or Edge, or type your answer."
+              : "Microphone access was denied. Check this site's microphone permission and try again."
         )
+      } else if (e.error === "network") {
+        speechRetryBlockedRef.current = true
+        setSpeechError("Speech recognition could not reach the browser's speech service. Check your connection or type your answer.")
+      } else if (e.error !== "no-speech" && e.error !== "aborted") {
+        setSpeechError(`Speech recognition stopped (${e.error}). You can retry or type your answer.`)
       }
     }
     recognitionRef.current = rec
@@ -94,13 +129,19 @@ const navigate = useNavigate()
   }, [])
 
   const startMic = ()=>{
+    if (!recognitionRef.current) {
+      setSpeechError("Speech-to-text is not supported in this browser. Use Chrome or Edge, or type your answer.")
+      return
+    }
+    speechRetryBlockedRef.current = false
     try {
-      recognitionRef.current?.start()
+      recognitionRef.current.start()
       setSpeechError("")
     } catch (error) {
-      if (error.name !== "InvalidStateError") {
+      if (error.name === "InvalidStateError") return
+      else {
         console.error("Could not start speech recognition:", error)
-        setSpeechError("Could not start the microphone. Check your browser permission.")
+        setSpeechError("Could not start speech recognition. Check microphone permission and try again.")
       }
     }
   }
@@ -127,7 +168,7 @@ const navigate = useNavigate()
       stopMic()
     }else{
       micOnRef.current = true
-      startMic()
+      if (!isAIPlaying) startMic()
     }
     setMicOn(!micOn)
   }
@@ -136,19 +177,34 @@ const navigate = useNavigate()
     if(cameraOn){
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      if (userVideoRef.current) userVideoRef.current.srcObject = null
       setCameraOn(false);
+      setCameraError("")
 
     }else{
+      setCameraLoading(true)
+      setCameraError("")
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({video:true})
+        if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Camera access requires a secure site (HTTPS or localhost) and a supported browser.")
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({video: { facingMode: "user" }})
         streamRef.current = stream
         setCameraOn(true)
-        setTimeout(()=>{
-          if(userVideoRef.current) userVideoRef.current.srcObject = stream
-
-        },100)
-      } catch {
+        if (userVideoRef.current) userVideoRef.current.srcObject = stream
+      } catch (error) {
         setCameraOn(false)
+        const messages = {
+          NotAllowedError: "Camera access is blocked. Allow camera access for this site in your browser settings, then retry.",
+          NotFoundError: "No camera was found. Connect a camera and try again.",
+          NotReadableError: "The camera is busy in another app. Close other apps using it and retry.",
+          OverconstrainedError: "The selected camera is unavailable. Check your connected camera and retry.",
+          SecurityError: "Camera access requires HTTPS (or localhost). Open the interview on a secure site.",
+        }
+        setCameraError(messages[error.name] || error.message || "Could not start the camera. Check browser permission and try again.")
+        console.error("Could not start interview camera:", error)
+      } finally {
+        setCameraLoading(false)
       }
     }
   }
@@ -407,6 +463,8 @@ const navigate = useNavigate()
             <div className='flex items-center justify-center gap-3'>
               <motion.button
               onClick={toggleMic} 
+              aria-label={micOn ? "Turn microphone off" : "Turn microphone on"}
+              title={micOn ? "Turn microphone off" : "Turn microphone on"}
               whileHover={{ scale: 1.08 }} 
               whileTap={{ scale: 0.93 }}
               className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${
@@ -420,10 +478,13 @@ const navigate = useNavigate()
               whileHover={{ scale: 1.08 }} 
               whileTap={{ scale: 0.93 }}
               onClick={toggleCamera}
+              disabled={cameraLoading}
+              aria-label={cameraLoading ? "Starting camera" : cameraOn ? "Turn camera off" : "Turn camera on"}
+              title={cameraLoading ? "Starting camera" : cameraOn ? "Turn camera off" : "Turn camera on"}
               className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${
                   cameraOn ? "bg-white/10 border-white/15 text-white" : "bg-white/5 border-white/10 text-white/45 hover:text-white/70"
                 }`}>
-                  {cameraOn ? <FiCamera size={15}/> : <FiCameraOff size={15}/>}
+                  {cameraLoading ? <span className="h-3 w-3 animate-spin rounded-full border border-white/40 border-t-white" /> : cameraOn ? <FiCamera size={15}/> : <FiCameraOff size={15}/>}
                 
 
               </motion.button>
@@ -444,8 +505,15 @@ const navigate = useNavigate()
             <div className='min-h-[14px] flex items-center justify-center'>
               {micOn && isAIPlaying && (
                 <span className="text-[10px] text-red-400/80">Mic paused — AI is speaking</span>)}
+              {micOn && !isAIPlaying && micListening && !speechError && (
+                <span className="text-[10px] text-emerald-400/80">Microphone is listening</span>)}
+              {micOn && !isAIPlaying && !micListening && !speechError && (
+                <span className="text-[10px] text-white/45">Starting microphone…</span>)}
               {speechError && !isAIPlaying && (
                 <span role="alert" className="text-center text-[10px] text-red-400/90">{speechError}</span>
+              )}
+              {cameraError && (
+                <span role="alert" className="text-center text-[10px] text-red-400/90">{cameraError}</span>
               )}
             </div>
 
