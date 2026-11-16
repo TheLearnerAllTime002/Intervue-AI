@@ -34,6 +34,10 @@ function App() {
   useEffect(() => {
     let active = true
     let authRevision = 0
+    // Let public routes render if Firebase's persisted-auth check stalls.
+    const authStartupTimeout = window.setTimeout(() => {
+      if (active) setLoading(false)
+    }, 10000)
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       const revision = ++authRevision
@@ -43,6 +47,7 @@ function App() {
           setUser(null)
           setAuthError(null)
           setLoading(false)
+          window.clearTimeout(authStartupTimeout)
         }
         return
       }
@@ -68,13 +73,17 @@ function App() {
           setAuthError(error)
         }
       } finally {
-        if (active && revision === authRevision) setLoading(false)
+        if (active && revision === authRevision) {
+          setLoading(false)
+          window.clearTimeout(authStartupTimeout)
+        }
       }
     }, (error) => {
       console.error("Firebase auth state listener failed:", error.code || "unknown")
       if (active) {
         setAuthError(error)
         setLoading(false)
+        window.clearTimeout(authStartupTimeout)
       }
     })
 
@@ -89,6 +98,7 @@ function App() {
     return () => {
       active = false
       authRevision += 1
+      window.clearTimeout(authStartupTimeout)
       unsubscribe()
     }
   }, [])

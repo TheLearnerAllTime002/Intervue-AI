@@ -52,7 +52,8 @@ function Sidebar({
     sidebarOpen,
     setSidebarOpen,
     moblieOpen,
-    setMoblieOpen
+    setMoblieOpen,
+    onStartTour
 }) {
     const navigate = useNavigate()
     const avatar = user?.name ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) : "U"
@@ -96,7 +97,7 @@ function Sidebar({
             </div>
 
 
-            <div className='px-2.5 pt-3 pb-1.5 shrink-0'>
+            <div data-tour="create-interview" className='px-2.5 pt-3 pb-1.5 shrink-0'>
                 <motion.button
                     onClick={onNewInterview}
                     whileHover={{ scale: 1.03 }}
@@ -118,6 +119,7 @@ function Sidebar({
                 </motion.button>
             </div>
             <nav className='flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2.5'>
+                <div data-tour="career-tools">
                 {sidebarOpen && <p className='mx-0.5 mt-2.5 mb-1 inline-flex w-fit items-center border-2 border-black border-l-4 border-l-sky-700 bg-sky-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-sky-950 shadow-[2px_2px_0_#171717]'>Agents</p>}
                 {AGENT_ITEMS.map((nav) => (
                     <motion.button key={nav.path}
@@ -140,9 +142,11 @@ function Sidebar({
                     </motion.button>
                 ))}
 
+                </div>
+
                 <div className='my-2 border-t-2 border-black/15' />
                 {sidebarOpen && <p className='mx-0.5 mb-1 inline-flex w-fit items-center border-2 border-black bg-yellow-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-black shadow-[2px_2px_0_#171717]'>Workspace</p>}
-                {WORKSPACE_ITEMS.map((nav) => (
+                <div data-tour="workspace-tools">{WORKSPACE_ITEMS.map((nav) => (
                     <motion.button key={nav.path}
                         onClick={() => { navigate(nav.path); setMoblieOpen(false) }}
                         whileHover={{ x: sidebarOpen ? 3 : 0 }}
@@ -151,13 +155,14 @@ function Sidebar({
                         <span className='shrink-0'>{nav.icon}</span>
                         {sidebarOpen && <span className='whitespace-nowrap'>{nav.label}</span>}
                     </motion.button>
-                ))}
+                ))}</div>
 
             </nav>
 
             {/* coins */}
 
             <div className='border-t border-black/8 p-2.5 shrink-0'>
+                {sidebarOpen && <button type="button" onClick={onStartTour} className="mb-2 w-full rounded-lg border border-black/15 px-2 py-1.5 text-left text-[11px] font-bold text-black/60 hover:bg-yellow-100 hover:text-black">Take the product tour</button>}
                 <motion.button
                     type='button'
                     onClick={() => navigate("/billing")}

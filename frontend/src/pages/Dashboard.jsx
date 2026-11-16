@@ -15,6 +15,8 @@ import InterviewHistory from '../components/InterviewHistory'
 import PracticeStreaks from '../components/PracticeStreaks'
 import SkillRadarChart from '../components/SkillRadarChart'
 import WeeklyGoal from '../components/WeeklyGoal'
+import ProductTour from '../components/ProductTour'
+import CareerNews from '../components/CareerNews'
 function Dashboard({ user, setUser }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [moblieOpen, setMoblieOpen] = useState(false)
@@ -102,7 +104,9 @@ function Dashboard({ user, setUser }) {
         setSidebarOpen={setSidebarOpen}
         moblieOpen={moblieOpen}
         setMoblieOpen={setMoblieOpen}
+        onStartTour={() => window.dispatchEvent(new Event("intervue:start-product-tour"))}
       />
+      <ProductTour />
 
       <motion.main className={`flex-1 min-h-screen px-3 sm:px-4 md:px-6 py-4 md:py-6 transition-all duration-300 ${sidebarOpen ? "md:ml-[260px]" : "md:ml-[72px]"
         }`}>
@@ -141,7 +145,7 @@ function Dashboard({ user, setUser }) {
 
         <div className='h-px bg-black/8 mb-5 md:mb-6' />
 
-        <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-3'>
+        <div data-tour="dashboard-stats" className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-3'>
 
           <Statbox
             label="Total Interviews"
@@ -204,11 +208,13 @@ function Dashboard({ user, setUser }) {
 
         </div>
 
-        <PracticeStreaks interviews={interviews} />
+        <div data-tour="dashboard-insights"><PracticeStreaks interviews={interviews} />
         <WeeklyGoal interviews={interviews} />
-        <SkillRadarChart interviews={interviews} />
+        <SkillRadarChart interviews={interviews} /></div>
 
-        <motion.div  
+        <CareerNews />
+
+        <motion.div data-tour="dashboard-history"
         initial={{ opacity: 0 }}
 
           animate={{ opacity: 1 }}

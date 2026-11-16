@@ -13,6 +13,7 @@ import { isAuth } from "./middleware/isAuth.js"
 import { proxyWithHeaders } from "./utils/proxyWithHeaders.js"
 import { proxyErrorHandler } from "./utils/proxyErrorHandler.js"
 import { sendContactMessage } from "./controllers/contact.controller.js"
+import { getCareerNews } from "./controllers/news.controller.js"
 import { authLog, ensureRequestId } from "../shared/diagnostics.js"
 import { getRedisClient } from "../shared/redis/redis.js"
 import { getSessionId, LEGACY_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME } from "../shared/sessionConfig.js"
@@ -107,6 +108,7 @@ app.use("/api/interview",isAuth ,proxyWithHeaders(interviewServiceUrl))
 app.use("/api/roadmap",isAuth ,proxyWithHeaders(roadmapServiceUrl))
 app.use("/api/billing",isAuth ,proxyWithHeaders(billingServiceUrl))
 app.get("/api/me",isAuth,getCurrentUser)
+app.get("/api/news/career", isAuth, getCareerNews)
 
 // Keep body parsing after proxy routes. The proxy must read the original
 // request stream so JSON bodies (including the Firebase token on login) are
