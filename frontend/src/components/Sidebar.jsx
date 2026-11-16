@@ -6,27 +6,27 @@ import { FaCirclePlus } from "react-icons/fa6";
 
 const AGENT_ITEMS = [
     {
-        icon: <FiFileText size={18} />,
+        icon: <FiFileText size={16} />,
         label: "Resume Builder",
         path: "/resume",
     },
     {
-        icon: <FiStar size={18} />,
+        icon: <FiStar size={16} />,
         label: "Resume Scorer",
         path: "/scorer",
     },
     {
-        icon: <FiMap size={18} />,
+        icon: <FiMap size={16} />,
         label: "Roadmap Builder",
         path: "/roadmap",
     },
     {
-        icon: <FiEdit size={18} />,
+        icon: <FiEdit size={16} />,
         label: "Cover Letter",
         path: "/cover-letter",
     },
     {
-        icon: <FiBookmark size={18} />,
+        icon: <FiBookmark size={16} />,
         label: "Question Banks",
         path: "/question-banks",
     },
@@ -34,12 +34,12 @@ const AGENT_ITEMS = [
 
 const WORKSPACE_ITEMS = [
     {
-        icon: <FiBriefcase size={18} />,
+        icon: <FiBriefcase size={16} />,
         label: "Applications",
         path: "/applications",
     },
     {
-        icon: <FiMail size={18} />,
+        icon: <FiMail size={16} />,
         label: "Contact Us",
         path: "/contact",
     },
